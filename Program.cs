@@ -113,6 +113,8 @@
                 return (true, "");
             else if(String.IsNullOrEmpty(previousToken))
                 return (false, $"Вираз не може починатись з '{token}'");
+            else if(previousToken == "(" && token == "-")
+                return (true, "");
 
             var previousTokenType = tokenizer.CheckTokenType(previousToken);
 
