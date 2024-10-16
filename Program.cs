@@ -1,167 +1,57 @@
 ﻿namespace ArithmeticExpressionAnalyzer
 {
-    public enum TokenType
-    {
-        function,
-        operation, 
-        digit,
-        variable,
-        openBrake,
-        closeBrake,
-        unknown
-    }
-
     internal class Program
     {
-        static Tokenizer tokenizer = new Tokenizer();
-        static Dictionary<TokenType, Func<string, string, (bool, string)>> TokensValidation = new Dictionary<TokenType, Func<string, string, (bool, string)>>
-        {
-            [TokenType.digit] = IsOperandPositionValid,
-            [TokenType.operation] = IsOperationPositionValid,
-            [TokenType.function] = IsOperandPositionValid,
-            [TokenType.variable] = IsOperandPositionValid,
-            [TokenType.openBrake] = IsOpenBrakePositionValid,
-            [TokenType.closeBrake] = IsCloseBrakePositionValid,
-            [TokenType.unknown] = (item1, item2) => (false, $"Не типовий символ '{item1}'")
-        };
-        static List<(int, string)> errors = new List<(int, string)>();
-        static List<(int, string)> errorsMessages= new List<(int, string)>();
-        static Stack<int> brakes = new Stack<int>();
+        static ArithmeticExpressionTokenizer tokenizer = new ArithmeticExpressionTokenizer();
 
         static void Main(string[] args)
         {
             while (true)
             {
                 Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+                //Get Expression
                 Console.WriteLine("Введіть вираз:");
                 var exp = Console.ReadLine();
                 exp = exp.Replace(" ", "");
-                var res = tokenizer.Tokenize(exp);
-                string? previous = null;
-                for (int i = 0; i < res.Count; i++)
+                //Tokenize Expression
+                var tokens = tokenizer.Tokenize(exp);
+                //Validate Expression
+                var ValidationRes = ArithmeticExpressionValidator.Validate(tokens);
+                if(ValidationRes != null && ValidationRes.Count > 0)
                 {
-                    var token = res[i];
-                    var tokenType = tokenizer.CheckTokenType(token.value);
-                    (bool res, string error) isValid;
-
-                    if (tokenType == TokenType.openBrake)
-                        brakes.Push(token.index);
-
-                    isValid = TokensValidation[tokenType].Invoke(token.value, previous);
-
-                    if (!isValid.res)
-                    {
-                        errors.Add(token);
-                        errorsMessages.Add((token.index, isValid.error));
-                    }
-
-                    previous = token.value;
+                    PrintErrors(ValidationRes, exp);
+                    continue;
                 }
 
-                if (brakes.Any())
-                    foreach (var item in brakes)
-                    {
-                        errors.Add((item, "("));
-                        errorsMessages.Add((item, "Лишня відкриваюча дужка"));
-                    }
-
-                errors = errors.Distinct().OrderBy(e => e.Item1).ToList();
-                var lastIndex = 0;
-                Console.WriteLine("---------------------------------------");
-                foreach (var error in errors)
-                {
-                    Console.Write(exp.Substring(lastIndex, error.Item1 - lastIndex));
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.Write(exp.Substring(error.Item1, error.Item2.Length));
-                    Console.ResetColor();
-                    lastIndex = error.Item1 + error.Item2.Length;
-                }
-
-                Console.WriteLine(exp.Substring(lastIndex));
-
-                errorsMessages = errorsMessages.OrderBy(e => e.Item1).ToList();
-                foreach (var errorsMessage in errorsMessages)
-                {
-                    Console.WriteLine($"Error: \"{errorsMessage.Item2}\"; Index: {errorsMessage.Item1}");
-                }
-
-                if (!errorsMessages.Any())
-                    Console.WriteLine($"Вираз правильний");
-                Console.WriteLine("---------------------------------------");
-                errors.Clear();
-                errorsMessages.Clear();
-                brakes.Clear();
+                //Else
+                Console.WriteLine($"Вираз правильний");
                 Console.ReadKey();
 
             }
         }
 
-        public static (bool res, string error) IsOperandPositionValid(string token, string? previousToken)
+        public static void PrintErrors(List<(int index, string token, string message)> errors, string expression)
         {
-            if (String.IsNullOrEmpty(previousToken))
-                return (true, "");
-
-            var previousTokenType = tokenizer.CheckTokenType(previousToken);
-
-            return (previousTokenType == TokenType.operation ||
-                previousTokenType == TokenType.openBrake, $"'{token}' не може стояти після '{previousToken}'");
-        }
-
-        public static (bool res, string error) IsOperationPositionValid(string token, string? previousToken)
-        {
-            if (String.IsNullOrEmpty(previousToken) && (token == "+" || token == "-"))
-                return (true, "");
-            else if(String.IsNullOrEmpty(previousToken))
-                return (false, $"Вираз не може починатись з '{token}'");
-            else if(previousToken == "(" && token == "-")
-                return (true, "");
-
-            var previousTokenType = tokenizer.CheckTokenType(previousToken);
-
-            return (previousTokenType == TokenType.digit ||
-                previousTokenType == TokenType.variable ||
-                previousTokenType == TokenType.closeBrake, $"'{token}' не може стояти після '{previousToken}'");
-        }
-
-        public static (bool res, string error) IsOpenBrakePositionValid(string token, string? previousToken)
-        {
-            if (token != "(")
-                throw new ArgumentException();
-
-            if (String.IsNullOrEmpty(previousToken))
-                return (true, "");
-
-            var previousTokenType = tokenizer.CheckTokenType(previousToken);
-
-            return (previousTokenType == TokenType.operation ||
-                previousTokenType == TokenType.function ||
-                previousTokenType == TokenType.openBrake, $"'{token}' не може стояти після '{previousToken}'");
-        }
-
-        public static (bool res, string error) IsCloseBrakePositionValid(string token, string? previousToken)
-        {
-            if (token != ")")
-                throw new ArgumentException();
-
-            if (String.IsNullOrEmpty(previousToken))
-                return (false, $"Вираз не може починатись з '{token}'");
-
-            if (!brakes.Any())
+            var lastIndex = 0;
+            Console.WriteLine("---------------------------------------");
+            errors = errors.OrderBy(res => res.index).ToList();
+            foreach (var error in errors)
             {
-                return(false, "Лишня закриваюча дужка");
-            }
-            else
-            {
-                brakes.Pop();
+                Console.Write(expression.Substring(lastIndex, error.index - lastIndex));
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.Write(expression.Substring(error.index, error.token.Length));
+                Console.ResetColor();
+                lastIndex = error.index + error.token.Length;
             }
 
-            var previousTokenType = tokenizer.CheckTokenType(previousToken);
+            Console.WriteLine(expression.Substring(lastIndex));
+            foreach (var errorsMessage in errors)
+            {
+                Console.WriteLine($"Error: \"{errorsMessage.message}\"; Index: {errorsMessage.index}");
+            }
 
-            
-            return (previousTokenType == TokenType.digit ||
-                previousTokenType == TokenType.variable ||
-                previousTokenType == TokenType.closeBrake, $"'{token}' не може стояти після '{previousToken}'");
-
+            Console.WriteLine("---------------------------------------");
         }
     }
 }

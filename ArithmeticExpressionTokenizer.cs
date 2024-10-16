@@ -8,19 +8,19 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ArithmeticExpressionAnalyzer
 {
-    public class Tokenizer
+    public class ArithmeticExpressionTokenizer
     {
-        public string[] Funstions { get; set; }
-        public string FloatDigins { get; set; }
-        public string Digins { get; set; }
-        public string Variables { get; set; }
-        public string[] Operations { get; set; }
-        public string OpenBrake { get; set; }
-        public string CloseBrake { get; set; }
+        public static string[]? Funstions { get; private set; }
+        public static string? FloatDigins { get; private set; }
+        public static string? Digins { get; private set; }
+        public static string? Variables { get; private set; }
+        public static string[]? Operations { get; private set; }
+        public static string? OpenBrake { get; private set; }
+        public static string? CloseBrake { get; private set; }
 
         private readonly string pattern;
 
-        public Tokenizer()
+        public ArithmeticExpressionTokenizer()
         {
             Funstions = [ "sin", "cos", "tg" ];
             Operations = [ "+", "-", "*", "/", "^" ];
@@ -61,27 +61,27 @@ namespace ArithmeticExpressionAnalyzer
             return tokens;
         }
 
-        public bool IsOperator(string token)
+        public static bool IsOperator(string token)
         {
             return Regex.IsMatch(token, $@"{string.Join('|', Operations.Select(o => @"\" + o))}");
         }
 
-        public bool IsNumber(string token)
+        public static bool IsNumber(string token)
         {
             return Regex.IsMatch(token, $@"{FloatDigins}|{Digins}");
         }
 
-        public bool IsVariable(string token)
+        public static bool IsVariable(string token)
         {
             return Regex.IsMatch(token, $@"{Variables}");
         }
 
-        private bool IsFunction(string token)
+        private static bool IsFunction(string token)
         {
             return Regex.IsMatch(token, $@"\b(?:{string.Join('|', Funstions)})\b");
         }
 
-        public TokenType CheckTokenType(string token)
+        public static TokenType CheckTokenType(string token)
         {
             return IsNumber(token) ? TokenType.digit :
                 IsFunction(token) ? TokenType.function :
