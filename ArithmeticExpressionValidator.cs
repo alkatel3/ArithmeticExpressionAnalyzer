@@ -17,28 +17,28 @@
         //static List<(int, string)> errorsMessages = new List<(int, string)>();
         static Stack<int> brakes = new Stack<int>();
 
-        public static List<(int index, string token, string message)> Validate(List<(int index, string value)> tokens)
+        public static List<(int index, string token, string message)> Validate(List<Token> tokens)
         {
             errors.Clear();
             string? previous = null;
             for (int i = 0; i < tokens.Count; i++)
             {
                 var token = tokens[i];
-                var tokenType = ArithmeticExpressionTokenizer.CheckTokenType(token.value);
+                var tokenType = ArithmeticExpressionTokenizer.CheckTokenType(token.Value);
                 (bool res, string error) isValid;
 
                 if (tokenType == TokenType.openBrake)
-                    brakes.Push(token.index);
+                    brakes.Push(token.Index);
 
-                isValid = TokensValidation[tokenType].Invoke(token.value, previous);
+                isValid = TokensValidation[tokenType].Invoke(token.Value, previous);
 
                 if (!isValid.res)
                 {
-                    errors.Add((token.index, token.value, isValid.error));
+                    errors.Add((token.Index, token.Value, isValid.error));
                     //errorsMessages.Add((token.index, isValid.error));
                 }
 
-                previous = token.value;
+                previous = token.Value;
             }
 
             if (brakes.Any())

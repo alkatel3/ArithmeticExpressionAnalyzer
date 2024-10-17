@@ -18,7 +18,7 @@
                 var tokens = tokenizer.Tokenize(exp);
                 //Validate Expression
                 var ValidationRes = ArithmeticExpressionValidator.Validate(tokens);
-                if(ValidationRes != null && ValidationRes.Count > 0)
+                if(ValidationRes != null && ValidationRes.Count() > 0)
                 {
                     PrintErrors(ValidationRes, exp);
                     continue;
@@ -26,6 +26,9 @@
 
                 //Else
                 Console.WriteLine($"Вираз правильний");
+
+                var optimizedExpression = ArithmeticExpressionOptimizer.Optimize(tokens);
+
                 Console.ReadKey();
 
             }

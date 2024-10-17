@@ -32,9 +32,9 @@ namespace ArithmeticExpressionAnalyzer
             pattern = @$"({string.Join('|', Funstions)}|{FloatDigins}|{Digins}|{Variables}|{string.Join('|', Operations.Select(o => @"\" + o))}|{OpenBrake}|{CloseBrake})";
         }
 
-        public List<(int index, string value)> Tokenize(string input)
+        public List<Token> Tokenize(string input)
         {
-            List<(int, string)> tokens = new List<(int, string)>();
+            List<Token> tokens = new List<Token>();
             MatchCollection matches = Regex.Matches(input, pattern);
 
             int lastIndex = 0;
@@ -43,10 +43,10 @@ namespace ArithmeticExpressionAnalyzer
                 if (lastIndex < match.Index)
                 {
                     string invalidToken = input.Substring(lastIndex, match.Index - lastIndex);
-                    tokens.Add((lastIndex, invalidToken.Trim()));
+                    tokens.Add(new Token(lastIndex, invalidToken.Trim()));
                 }
                 lastIndex = match.Index + match.Length;
-                tokens.Add((match.Index, match.Value));
+                tokens.Add(new Token(match.Index, match.Value));
             }
 
             if (lastIndex < input.Length)
@@ -54,7 +54,7 @@ namespace ArithmeticExpressionAnalyzer
                 string invalidToken = input.Substring(lastIndex).Trim();
                 if (!string.IsNullOrEmpty(invalidToken))
                 {
-                    tokens.Add((lastIndex, invalidToken));
+                    tokens.Add(new Token(lastIndex, invalidToken));
                 }
             }
 
