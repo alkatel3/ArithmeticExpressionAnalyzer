@@ -1,4 +1,5 @@
-﻿namespace ArithmeticExpressionAnalyzer
+﻿
+namespace ArithmeticExpressionAnalyzer
 {
     internal class Program
     {
@@ -28,9 +29,17 @@
                 Console.WriteLine($"Вираз правильний");
 
                 var optimizedExpression = ArithmeticExpressionOptimizer.Optimize(tokens);
-
+                diplayTokens(optimizedExpression);
                 Console.ReadKey();
 
+            }
+        }
+
+        private static void diplayTokens(List<Token> optimizedExpression)
+        {
+            foreach(var item in optimizedExpression)
+            {
+                Console.Write(item.Value);
             }
         }
 

@@ -57,10 +57,32 @@
             {
                 var token = tokens[i];
                 next = (i + 1 < tokens.Count) ? tokens[i + 1] : null;
-                var tokenType = ArithmeticExpressionTokenizer.CheckTokenType(token.Value);
                 var op = false;
-                if (tokenType == TokenType.operation)
-                    op = IsOperationPositionValidCalc(token, previous, next);
+                if (token.Value == "*" ||
+                    token.Value == "^" ||
+                    token.Value == "/")
+                    op = Calc(token, previous, next, 0);
+
+                if (op)
+                {
+                    previous = null;
+                    next = null;
+                    i = -1;
+                    continue;
+                }
+                previous = token;
+            }
+
+            previous = null;
+            next = null;
+            for (int i = 0; i < _tokens.Count; i++)
+            {
+                var token = tokens[i];
+                next = (i + 1 < tokens.Count) ? tokens[i + 1] : null;
+                var op = false;
+                if (token.Value == "-" ||
+                    token.Value == "+")
+                    op = Calc(token, previous, next, 1);
 
                 if (op)
                 {
@@ -89,7 +111,7 @@
             return _tokens;
         }
 
-        public static bool IsOperationPositionValidCalc(Token? token, Token? previousToken, Token? nextToken)
+        public static bool Calc(Token? token, Token? previousToken, Token? nextToken, int iteration)
         {
             if (previousToken!=null && ArithmeticExpressionTokenizer.CheckTokenType(previousToken?.Value) == TokenType.digit &&
                 nextToken != null && ArithmeticExpressionTokenizer.CheckTokenType(nextToken?.Value) == TokenType.digit)
@@ -105,14 +127,25 @@
                     _tokens[removeStart - 1].Value = "+";
                 }
 
-                var res = token.Value switch
+                double res = 0;
+
+                if (iteration == 0)
                 {
-                    "+" => left + right,
-                    "-" => left - right,
-                    "*" => left * right,
-                    "/" => left / right,
-                    "^" => Math.Pow(left, right),
-                };
+                    res = token.Value switch
+                    {
+                        "*" => left * right,
+                        "/" => left / right,
+                        "^" => Math.Pow(left, right),
+                    };
+                }
+                else
+                {
+                    res = token.Value switch
+                    {
+                        "+" => left + right,
+                        "-" => left - right,
+                    };
+                }
 
                 _tokens.RemoveRange(removeStart, removeEnd - removeStart + 1);
 
@@ -122,7 +155,7 @@
                     res *= -1;
                 }
 
-                _tokens.Insert(removeStart, new Token(removeStart, res.ToString()));
+                _tokens.Insert(removeStart, new Token(removeStart, res.ToString(System.Globalization.CultureInfo.InvariantCulture)));
                 return true;
             }
 
@@ -167,18 +200,13 @@
                     var previousTokenIndex = _tokens.IndexOf(previousToken);
                     var openBrake = _tokens[..previousTokenIndex].Last(token => token.Value == "(");
                     var openBrakeIndex = _tokens.IndexOf(openBrake);
-
                     removeStart = openBrakeIndex == 0 ? 0 : openBrakeIndex - 1;
                 }
                 else
-                {
                     removeStart -= 1;
-                }
 
                 if (ArithmeticExpressionTokenizer.CheckTokenType(nextToken.Value) == TokenType.function)
-                {
                     nextToken = _tokens[_tokens.IndexOf(nextToken) + 1];
-                }
 
                 if (nextToken?.Value == "(")
                 {
@@ -188,13 +216,11 @@
                     removeEnd = closeBrakeIndex;
                 }
                 else
-                {
                     removeEnd++;
-                }
+
                 var newTokenIndex = _tokens[removeStart].Index;
                 _tokens.RemoveRange(removeStart, removeEnd - removeStart + 1);
                 _tokens.Insert(removeStart, new Token(newTokenIndex, "0"));
-
                 return true;
             }
 
