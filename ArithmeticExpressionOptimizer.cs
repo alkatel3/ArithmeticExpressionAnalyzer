@@ -1,11 +1,25 @@
 ﻿namespace ArithmeticExpressionAnalyzer
 {
+    public enum OpimizeType
+    {
+        AddingZero,
+        DivideZero,
+        SubZero, 
+        MulZero,
+        MulOne,
+        DividedOne,
+        UnarityMinus,
+        CalcConst,
+    }
+
     public class ArithmeticExpressionOptimizer
     {
         private static List<Token> _tokens;
+        public static Dictionary<OpimizeType, int> Optimised { get; private set; }
 
         public static List<Token> Optimize(List<Token> tokens)
         {
+            Optimised = new();
             _tokens = tokens;
 
             Token? previous = null;
@@ -17,7 +31,7 @@
                 var tokenType = ArithmeticExpressionTokenizer.CheckTokenType(token.Value);
                 var op = false;
                 if(tokenType == TokenType.operation) 
-                    op = IsOperationPositionValidZero(token, previous, next);
+                    op = ZeroCalc(token, previous, next);
 
                 if (op)
                 {
@@ -39,7 +53,7 @@
                 var tokenType = ArithmeticExpressionTokenizer.CheckTokenType(token.Value);
                 var op = false;
                 if (tokenType == TokenType.operation)
-                    op = IsOperationPositionValidZeroOne(token, previous, next);
+                    op = ZeroOneCalc(token, previous, next);
 
                 if (op)
                 {
@@ -103,6 +117,7 @@
                 if (token.Value == "-" && (previous == null || previous.Value == "("))
                 {
                     _tokens.Insert(i, new Token(i, "0"));
+                    WriteOptimisation(OpimizeType.UnarityMinus);
                 }
 
                 previous = token;
@@ -111,7 +126,7 @@
             return _tokens;
         }
 
-        public static bool Calc(Token? token, Token? previousToken, Token? nextToken, int iteration)
+        private static bool Calc(Token? token, Token? previousToken, Token? nextToken, int iteration)
         {
             if (previousToken!=null && ArithmeticExpressionTokenizer.CheckTokenType(previousToken?.Value) == TokenType.digit &&
                 nextToken != null && ArithmeticExpressionTokenizer.CheckTokenType(nextToken?.Value) == TokenType.digit)
@@ -156,17 +171,19 @@
                 }
 
                 _tokens.Insert(removeStart, new Token(removeStart, res.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                WriteOptimisation(OpimizeType.CalcConst);
+
                 return true;
             }
 
             return false;
         }
 
-        public static bool IsOperationPositionValidZeroOne(Token? token, Token? previousToken, Token? nextToken)
+        private static bool ZeroOneCalc(Token? token, Token? previousToken, Token? nextToken)
         {
             if (token?.Value == "*" && (previousToken?.Value == "1" || nextToken?.Value == "1") ||
                 (token?.Value == "/" && nextToken?.Value == "1") ||
-                ((token?.Value == "-" || token?.Value == "+") && (previousToken?.Value == "0" || nextToken?.Value == "0"))
+                ((token?.Value == "-" || token?.Value == "+") && (previousToken?.Value == "0" || nextToken?.Value == "0") && previousToken?.Value != null)
                 )
             {
                 var removeStart = _tokens.IndexOf(token);
@@ -183,13 +200,31 @@
 
                 _tokens.RemoveRange(removeStart, removeEnd - removeStart + 1);
 
+                switch(token?.Value)
+                {
+                    case "*":
+                        WriteOptimisation(OpimizeType.MulOne);
+                        break;
+                    case "/":
+                        WriteOptimisation(OpimizeType.SubZero);
+                        break;
+                    case "-":
+                        WriteOptimisation(OpimizeType.AddingZero);
+                        break;
+                    case "+":
+                        WriteOptimisation(OpimizeType.AddingZero);
+                        break;
+                    default:
+                        break;
+                };
+
                 return true;
             }
 
             return false;
         }
 
-        public static bool IsOperationPositionValidZero(Token? token, Token? previousToken, Token? nextToken)
+        private static bool ZeroCalc(Token? token, Token? previousToken, Token? nextToken)
         {
             if ((token?.Value == "*" || token?.Value == "/") && (previousToken?.Value == "0" || nextToken?.Value == "0"))
             {
@@ -221,10 +256,23 @@
                 var newTokenIndex = _tokens[removeStart].Index;
                 _tokens.RemoveRange(removeStart, removeEnd - removeStart + 1);
                 _tokens.Insert(removeStart, new Token(newTokenIndex, "0"));
+                if (token?.Value == "*")
+                    WriteOptimisation(OpimizeType.MulZero);
+                else
+                    WriteOptimisation(OpimizeType.DivideZero);
+
                 return true;
             }
 
             return false;
+        }
+
+        private static void WriteOptimisation(OpimizeType opimizeType)
+        {
+            if (Optimised.ContainsKey(opimizeType))
+                Optimised[opimizeType]++;
+            else
+                Optimised[opimizeType] = 1;
         }
     }
 }
