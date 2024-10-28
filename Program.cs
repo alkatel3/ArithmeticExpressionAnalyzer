@@ -29,9 +29,50 @@ namespace ArithmeticExpressionAnalyzer
                 Console.WriteLine($"Вираз правильний");
 
                 var optimizedExpression = ArithmeticExpressionOptimizer.Optimize(tokens);
-                diplayTokens(optimizedExpression);
-                Console.ReadKey();
 
+                diplayTokens(optimizedExpression);
+
+                if (ArithmeticExpressionOptimizer.Optimised.Count > 0)
+                {
+                    Console.WriteLine("\nСпрощення виразу:");
+                    foreach(var item in ArithmeticExpressionOptimizer.Optimised)
+                    {
+                        switch(item.Key) {
+                            case OpimizeType.UnarityMinus:
+                                Console.WriteLine($"Унарний мінус: {item.Value}");
+                                break;
+                            case OpimizeType.AddingZero:
+                                Console.WriteLine($"Додавання нуля: {item.Value}");
+                                break;
+                            case OpimizeType.MulZero:
+                                Console.WriteLine($"Множення на нуль: {item.Value}");
+                                break;
+                            case OpimizeType.SubZero:
+                                Console.WriteLine($"Віднімання нуля: {item.Value}");
+                                break;
+                            case OpimizeType.MulOne:
+                                Console.WriteLine($"Множення на один: {item.Value}");
+                                break;
+                            case OpimizeType.DividedOne:
+                                Console.WriteLine($"Ділення на один: {item.Value}");
+                                break;
+                            case OpimizeType.DivideZero:
+                                Console.WriteLine($"Ділення нуля на число: {item.Value}");
+                                break;
+                            case OpimizeType.CalcConst:
+                                Console.WriteLine($"Обчислення констант: {item.Value}");
+                                break;
+                        }
+
+                    }
+                }
+
+                Console.WriteLine();
+                var tree = new ArithmeticTree();
+                tree.BuildTree(optimizedExpression);
+                tree.DisplayTree();
+                Console.ReadKey();
+                Console.Clear();
             }
         }
 

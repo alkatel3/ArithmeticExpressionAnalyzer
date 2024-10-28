@@ -26,7 +26,7 @@ namespace ArithmeticExpressionAnalyzer
             Operations = [ "+", "-", "*", "/", "^" ];
             FloatDigins = @"\d+\.\d+";
             Digins = @"\d+";
-            Variables = @"[a-zA-Z]";
+            Variables = @"\b[_@]?[a-zA-Z][a-zA-Z0-9_]*\b";
             OpenBrake = @"\(";
             CloseBrake = @"\)";
             pattern = @$"({string.Join('|', Funstions)}|{FloatDigins}|{Digins}|{Variables}|{string.Join('|', Operations.Select(o => @"\" + o))}|{OpenBrake}|{CloseBrake})";

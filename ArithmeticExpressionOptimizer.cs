@@ -133,8 +133,8 @@
             {
                 var removeStart = _tokens.IndexOf(previousToken);
                 var removeEnd = _tokens.IndexOf(nextToken);
-                var left = Double.Parse(previousToken.Value);
-                var right = Double.Parse(nextToken.Value);
+                var left = Double.Parse(previousToken.Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture);
+                var right = Double.Parse(nextToken.Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture);
 
                 if(removeStart-1>=0 && _tokens[removeStart - 1].Value == "-")
                 {
@@ -206,7 +206,7 @@
                         WriteOptimisation(OpimizeType.MulOne);
                         break;
                     case "/":
-                        WriteOptimisation(OpimizeType.SubZero);
+                        WriteOptimisation(OpimizeType.DividedOne);
                         break;
                     case "-":
                         WriteOptimisation(OpimizeType.AddingZero);
@@ -228,6 +228,9 @@
         {
             if ((token?.Value == "*" || token?.Value == "/") && (previousToken?.Value == "0" || nextToken?.Value == "0"))
             {
+                if (token.Value == "/" && nextToken?.Value == "0")
+                    throw new DivideByZeroException($"Ділення на 0, індекс {nextToken.Index}");
+
                 var removeStart = _tokens.IndexOf(token);
                 var removeEnd = _tokens.IndexOf(token);
                 if (previousToken?.Value == ")")
@@ -235,7 +238,7 @@
                     var previousTokenIndex = _tokens.IndexOf(previousToken);
                     var openBrake = _tokens[..previousTokenIndex].Last(token => token.Value == "(");
                     var openBrakeIndex = _tokens.IndexOf(openBrake);
-                    removeStart = openBrakeIndex == 0 ? 0 : openBrakeIndex - 1;
+                    removeStart = openBrakeIndex;
                 }
                 else
                     removeStart -= 1;
