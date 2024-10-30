@@ -26,6 +26,7 @@
 
             OpimizeWrapper(isOperation, ZeroCalc);
             OpimizeWrapper(isOperation, ZeroOneCalc);
+            OpimizeWrapper(token => token.Value == "^", Calc);
             OpimizeWrapper(isMul, Calc);
             OpimizeWrapper(isAdd, Calc);
 
@@ -58,7 +59,7 @@
                 if (predicate.Invoke(token))
                     i -= opimise.Invoke(token, previous, next);
 
-                previous = token;
+                previous = i < 0 ? null : _tokens[i];
             }
         }
 
@@ -71,7 +72,6 @@
         private static bool isMul(Token token)
         {
             return token.Value == "*" ||
-                    token.Value == "^" ||
                     token.Value == "/";
         }
         private static bool isAdd(Token token)
@@ -96,6 +96,15 @@
                     _tokens[removeStart - 1].Value = "+";
                 }
 
+                if (_tokens.Count > (removeEnd + 1) &&
+                    (token.Value == "+" || token.Value == "-") &&
+                    (_tokens[removeEnd + 1].Value == "*" || _tokens[removeEnd + 1].Value == "/" || _tokens[removeEnd + 1].Value == "^"))
+                    return 0;
+                else if (_tokens.Count > (removeEnd + 1) &&
+                    (token.Value == "*" || token.Value == "/") &&
+                     _tokens[removeEnd + 1].Value == "^")
+                    return 0;
+
                 double res = 0;
                 res = token.Value switch
                 {
@@ -107,7 +116,8 @@
                 };
 
                 _tokens.RemoveRange(removeStart, removeEnd - removeStart + 1);
-                if(res < 0 && removeStart - 1 >= 0 && _tokens[removeStart - 1].Value == "+")
+                Calculation.Add($"{left} {token.Value} {right} = {res}");
+                if (res < 0 && removeStart - 1 >= 0 && _tokens[removeStart - 1].Value == "+")
                 {
                     _tokens[removeStart - 1].Value = "-";
                     res *= -1;
@@ -115,7 +125,6 @@
 
                 _tokens.Insert(removeStart, new Token(removeStart, res.ToString(System.Globalization.CultureInfo.InvariantCulture)));
                 WriteOptimisation(OpimizeType.CalcConst);
-                Calculation.Add($"{left} {token.Value} {right} = {res}");
                 return 2;
             }
 
@@ -174,7 +183,7 @@
                         break;
                 };
 
-                return i - removeStart;
+                return i - removeStart+1;
             }
 
             return 0;
@@ -202,6 +211,15 @@
                 if (ArithmeticExpressionTokenizer.CheckTokenType(nextToken.Value) == TokenType.function)
                     nextToken = _tokens[_tokens.IndexOf(nextToken) + 1];
 
+                if(_tokens.Count > i+2 && (_tokens[i + 2].Value=="*" || _tokens[i + 2].Value == "/"))
+                {
+                    nextToken = _tokens[i + 3];
+                    if (token?.Value == "*")
+                        WriteOptimisation(OpimizeType.MulZero);
+                    else
+                        WriteOptimisation(OpimizeType.DivideZero);
+                }
+
                 if (nextToken?.Value == "(")
                 {
                     var nextTokenIndex = _tokens.IndexOf(nextToken);
@@ -223,13 +241,14 @@
                         removeStart = openBrakeIndex;
                     }
                 }
-                _tokens.RemoveRange(removeStart-1 >=0 ? removeStart-1:0, removeEnd - removeStart + 2);
+                _tokens.RemoveRange(removeStart-1 >=0 ? removeStart-1:0,
+                    (removeEnd - removeStart + 2)>_tokens.Count ? _tokens.Count : (removeEnd - removeStart + 2));
                 if (token?.Value == "*")
                     WriteOptimisation(OpimizeType.MulZero);
                 else
                     WriteOptimisation(OpimizeType.DivideZero);
 
-                return i - removeStart ;
+                return i - removeStart +1;
             }
 
             return 0;

@@ -15,80 +15,27 @@ namespace ArithmeticExpressionAnalyzer
         public void BuildTree(List<Token> tokens)
         {
             Root = getNode(tokens);
-
-            CheckOperationSequenceAdd(Root);
-            //CheckOperationSequenceMul(Root);
         }
 
-        private void CheckOperationSequenceMul(Node node)
-        {
-            if (node.Right == null || node.Left == null)
-                return;
-
-            if (node.Value == "/" && (node.Right?.Value == "/" || node.Right?.Value == "*"))
-            {
-                node.Right.Value = node.Right.Value == "/" ? "*" : "/";
-
-                changeMulOperation(node.Right);
-            }
-
-            CheckOperationSequenceMul(node.Right);
-            CheckOperationSequenceMul(node.Left);
-        }
-
-        private void changeMulOperation(Node node)
-        {
-            if (node.Left.Value == "/" || node.Left.Value == "*")
-            {
-                node.Left.Value = node.Right.Value == "/" ? "*" : "/";
-                changeMulOperation(node.Left);
-            }
-
-            if (node.Right.Value == "/" || node.Right.Value == "*")
-            {
-                node.Right.Value = node.Right.Value == "/" ? "*" : "/";
-                changeMulOperation(node.Right);
-            }
-        }
-
-        private void CheckOperationSequenceAdd(Node node)
-        {
-            if (node.Right == null || node.Left == null)
-                return;
-
-            if(node.Value == "-" && (node.Right?.Value=="-" || node.Right?.Value == "+"))
-            {
-                node.Right.Value = node.Right.Value == "-" ? "+" : "-";
-
-                changeAddOperation(node.Right);
-            }
-
-            CheckOperationSequenceAdd(node.Right);
-            CheckOperationSequenceAdd(node.Left);
-        }
-
-        private void changeAddOperation(Node node)
-        {
-            if(node.Left.Value == "-" || node.Left.Value == "+")
-            {
-                node.Left.Value = node.Right.Value == "-" ? "+" : "-";
-                changeAddOperation(node.Left);
-            }
-
-            if (node.Right.Value == "-" || node.Right.Value == "+")
-            {
-                node.Right.Value = node.Right.Value == "-" ? "+" : "-";
-                changeAddOperation(node.Right);
-            }
-        }
-
-        private Node getNode(List<Token> tokens)
+        private Node getNode(List<Token> tokens, bool isMin = false, bool isDiv = false)
         {
             if (tokens.Count == 0)
                 return new Node();
-            else if(tokens.Count == 1)
-                return new(tokens[0].Value);
+            else if (tokens.Count == 1)
+            {
+                if (isMin)
+                {
+                    var res = new Node("*");
+                    res.SetLeftNode(new("-1"));
+                    res.SetRightNode(new(tokens[0].Value));
+                    return res;
+                }
 
+                return new(tokens[0].Value);
+            }
+
+            bool _isMin = false;
+            bool _isDiv = false;
             Node node, left, right;
             Token val = null;
             List<int> propNode = new List<int>();
@@ -113,6 +60,8 @@ namespace ArithmeticExpressionAnalyzer
                 if (propNode.Count > 0)
                 {
                     val = tokens[propNode[propNode.Count / 2]];
+                    _isMin = val.Value == "-" && propNode.Count > 1 && propNode.Count != 2;
+                    _isDiv = val.Value == "/" && propNode.Count > 1 && propNode.Count != 2;
                     break;
                 }
 
@@ -122,21 +71,51 @@ namespace ArithmeticExpressionAnalyzer
                     {
                         node = new Node(tokens[0].Value);
                         left = getNode(tokens[2..^1]);
-                        node.SetLeftNode(left);
+                        node.SetRightNode(left);
+                        if (isMin)
+                        {
+                            var node2 = new Node("*");
+                            node2.SetLeftNode(new("-1"));
+                            node2.SetRightNode(node);
+                            return node2;
+                        }
+                        if (isDiv)
+                        {
+                            var node2 = new Node("/");
+                            node2.SetLeftNode(new("1"));
+                            node2.SetRightNode(node);
+                            return node2;
+                        }
+
                         return node;
                     }
 
                     else if (tokens.Count == 1)
                         return new(tokens[0].Value);
 
+                    if (isMin)
+                    {
+                        var node2 = new Node("*");
+                        node2.SetLeftNode(new("-1"));
+                        node2.SetRightNode(getNode(tokens[1..^1]));
+                        return node2;
+                    }
+                    if (isDiv)
+                    {
+                        var node2 = new Node("/");
+                        node2.SetLeftNode(new("1"));
+                        node2.SetRightNode(getNode(tokens[1..^1]));
+                        return node2;
+                    }
+
                     tokens = tokens[1..^1];
                     i = -1;
                 }
             }
 
-            node = new Node(val.Value);
-            left = getNode(tokens[0..tokens.IndexOf(val)]);
-            right = getNode(tokens[(tokens.IndexOf(val)+1)..tokens.Count]);
+            node = new Node(_isMin ? "+" : _isDiv ? "*" : val.Value);
+            left = getNode(tokens[0..tokens.IndexOf(val)], isMin, isDiv);
+            right = getNode(tokens[(tokens.IndexOf(val)+1)..tokens.Count], _isMin, _isDiv);
             node.SetLeftNode(left);
             node.SetRightNode(right);
             return node;
