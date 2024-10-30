@@ -7,7 +7,7 @@ namespace ArithmeticExpressionAnalyzer
         public Node Left { get; private set; }
         public Node Right { get; private set; }
 
-        public string Value { get; private set; }
+        public string Value { get;  set; }
 
         public Node()
         {

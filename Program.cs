@@ -19,55 +19,19 @@ namespace ArithmeticExpressionAnalyzer
                 var tokens = tokenizer.Tokenize(exp);
                 //Validate Expression
                 var ValidationRes = ArithmeticExpressionValidator.Validate(tokens);
-                if(ValidationRes != null && ValidationRes.Count() > 0)
+                if (ValidationRes != null && ValidationRes.Count() > 0)
                 {
                     PrintErrors(ValidationRes, exp);
                     continue;
                 }
 
-                //Else
                 Console.WriteLine($"Вираз правильний");
-
+                //Optimize Expression
                 var optimizedExpression = ArithmeticExpressionOptimizer.Optimize(tokens);
-
-                diplayTokens(optimizedExpression);
-
-                if (ArithmeticExpressionOptimizer.Optimised.Count > 0)
-                {
-                    Console.WriteLine("\nСпрощення виразу:");
-                    foreach(var item in ArithmeticExpressionOptimizer.Optimised)
-                    {
-                        switch(item.Key) {
-                            case OpimizeType.UnarityMinus:
-                                Console.WriteLine($"Унарний мінус: {item.Value}");
-                                break;
-                            case OpimizeType.AddingZero:
-                                Console.WriteLine($"Додавання нуля: {item.Value}");
-                                break;
-                            case OpimizeType.MulZero:
-                                Console.WriteLine($"Множення на нуль: {item.Value}");
-                                break;
-                            case OpimizeType.SubZero:
-                                Console.WriteLine($"Віднімання нуля: {item.Value}");
-                                break;
-                            case OpimizeType.MulOne:
-                                Console.WriteLine($"Множення на один: {item.Value}");
-                                break;
-                            case OpimizeType.DividedOne:
-                                Console.WriteLine($"Ділення на один: {item.Value}");
-                                break;
-                            case OpimizeType.DivideZero:
-                                Console.WriteLine($"Ділення нуля на число: {item.Value}");
-                                break;
-                            case OpimizeType.CalcConst:
-                                Console.WriteLine($"Обчислення констант: {item.Value}");
-                                break;
-                        }
-
-                    }
-                }
-
+                displayTokens(optimizedExpression);
+                displayOptimising();
                 Console.WriteLine();
+                //Expression Build Tree
                 var tree = new ArithmeticTree();
                 tree.BuildTree(optimizedExpression);
                 tree.DisplayTree();
@@ -76,7 +40,48 @@ namespace ArithmeticExpressionAnalyzer
             }
         }
 
-        private static void diplayTokens(List<Token> optimizedExpression)
+        private static void displayOptimising()
+        {
+            if (ArithmeticExpressionOptimizer.Optimised.Count > 0)
+            {
+                Console.WriteLine("\nСпрощення виразу:");
+                foreach (var item in ArithmeticExpressionOptimizer.Optimised)
+                {
+                    switch (item.Key)
+                    {
+                        case OpimizeType.UnarityMinus:
+                            Console.WriteLine($"Унарний мінус: {item.Value}");
+                            break;
+                        case OpimizeType.AddingZero:
+                            Console.WriteLine($"Додавання нуля: {item.Value}");
+                            break;
+                        case OpimizeType.MulZero:
+                            Console.WriteLine($"Множення на нуль: {item.Value}");
+                            break;
+                        case OpimizeType.SubZero:
+                            Console.WriteLine($"Віднімання нуля: {item.Value}");
+                            break;
+                        case OpimizeType.MulOne:
+                            Console.WriteLine($"Множення на один: {item.Value}");
+                            break;
+                        case OpimizeType.DividedOne:
+                            Console.WriteLine($"Ділення на один: {item.Value}");
+                            break;
+                        case OpimizeType.DivideZero:
+                            Console.WriteLine($"Ділення нуля на число: {item.Value}");
+                            break;
+                        case OpimizeType.CalcConst:
+                            Console.WriteLine($"Обчислення констант: {item.Value}");
+                            foreach (var calc in ArithmeticExpressionOptimizer.Calculation)
+                                Console.WriteLine(calc);
+                            break;
+                    }
+
+                }
+            }
+        }
+
+        private static void displayTokens(List<Token> optimizedExpression)
         {
             foreach(var item in optimizedExpression)
             {

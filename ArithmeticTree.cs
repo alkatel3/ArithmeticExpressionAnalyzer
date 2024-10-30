@@ -1,6 +1,7 @@
 ﻿
 using System.ComponentModel.DataAnnotations;
 using System.Windows.Markup;
+using System.Xml.Linq;
 
 namespace ArithmeticExpressionAnalyzer
 {
@@ -14,6 +15,71 @@ namespace ArithmeticExpressionAnalyzer
         public void BuildTree(List<Token> tokens)
         {
             Root = getNode(tokens);
+
+            CheckOperationSequenceAdd(Root);
+            //CheckOperationSequenceMul(Root);
+        }
+
+        private void CheckOperationSequenceMul(Node node)
+        {
+            if (node.Right == null || node.Left == null)
+                return;
+
+            if (node.Value == "/" && (node.Right?.Value == "/" || node.Right?.Value == "*"))
+            {
+                node.Right.Value = node.Right.Value == "/" ? "*" : "/";
+
+                changeMulOperation(node.Right);
+            }
+
+            CheckOperationSequenceMul(node.Right);
+            CheckOperationSequenceMul(node.Left);
+        }
+
+        private void changeMulOperation(Node node)
+        {
+            if (node.Left.Value == "/" || node.Left.Value == "*")
+            {
+                node.Left.Value = node.Right.Value == "/" ? "*" : "/";
+                changeMulOperation(node.Left);
+            }
+
+            if (node.Right.Value == "/" || node.Right.Value == "*")
+            {
+                node.Right.Value = node.Right.Value == "/" ? "*" : "/";
+                changeMulOperation(node.Right);
+            }
+        }
+
+        private void CheckOperationSequenceAdd(Node node)
+        {
+            if (node.Right == null || node.Left == null)
+                return;
+
+            if(node.Value == "-" && (node.Right?.Value=="-" || node.Right?.Value == "+"))
+            {
+                node.Right.Value = node.Right.Value == "-" ? "+" : "-";
+
+                changeAddOperation(node.Right);
+            }
+
+            CheckOperationSequenceAdd(node.Right);
+            CheckOperationSequenceAdd(node.Left);
+        }
+
+        private void changeAddOperation(Node node)
+        {
+            if(node.Left.Value == "-" || node.Left.Value == "+")
+            {
+                node.Left.Value = node.Right.Value == "-" ? "+" : "-";
+                changeAddOperation(node.Left);
+            }
+
+            if (node.Right.Value == "-" || node.Right.Value == "+")
+            {
+                node.Right.Value = node.Right.Value == "-" ? "+" : "-";
+                changeAddOperation(node.Right);
+            }
         }
 
         private Node getNode(List<Token> tokens)
@@ -79,7 +145,7 @@ namespace ArithmeticExpressionAnalyzer
         public void DisplayTree()
         {
             int initialX = Console.WindowWidth / 2;
-            DisplayNode(Root, initialX, Console.GetCursorPosition().Top + 1, Console.WindowWidth / 10);
+            DisplayNode(Root, initialX, Console.GetCursorPosition().Top + 1, Console.WindowWidth / 4);
         }
 
         private void DisplayNode(Node node, int x, int y, int offset)

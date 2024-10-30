@@ -16,100 +16,21 @@
     {
         private static List<Token> _tokens;
         public static Dictionary<OpimizeType, int> Optimised { get; private set; }
+        public static List<string> Calculation { get; private set; }
 
         public static List<Token> Optimize(List<Token> tokens)
         {
             Optimised = new();
+            Calculation = new();
             _tokens = tokens;
+
+            OpimizeWrapper(isOperation, ZeroCalc);
+            OpimizeWrapper(isOperation, ZeroOneCalc);
+            OpimizeWrapper(isMul, Calc);
+            OpimizeWrapper(isAdd, Calc);
 
             Token? previous = null;
             Token? next = null;
-            for (int i = 0; i < _tokens.Count; i++)
-            {
-                var token = tokens[i];
-                next = (i+1<tokens.Count) ? tokens[i+1] : null;
-                var tokenType = ArithmeticExpressionTokenizer.CheckTokenType(token.Value);
-                var op = false;
-                if(tokenType == TokenType.operation) 
-                    op = ZeroCalc(token, previous, next);
-
-                if (op)
-                {
-                    previous = null;
-                    next = null;
-                    i = -1;
-                    continue;
-                }
-
-                previous = token;
-            }
-
-            previous = null;
-            next = null;
-            for (int i = 0; i < _tokens.Count; i++)
-            {
-                var token = tokens[i];
-                next = (i + 1 < tokens.Count) ? tokens[i + 1] : null;
-                var tokenType = ArithmeticExpressionTokenizer.CheckTokenType(token.Value);
-                var op = false;
-                if (tokenType == TokenType.operation)
-                    op = ZeroOneCalc(token, previous, next);
-
-                if (op)
-                {
-                    previous = null;
-                    next = null;
-                    i = -1;
-                    continue;
-                }
-                previous = token;
-            }
-
-            previous = null;
-            next = null;
-            for (int i = 0; i < _tokens.Count; i++)
-            {
-                var token = tokens[i];
-                next = (i + 1 < tokens.Count) ? tokens[i + 1] : null;
-                var op = false;
-                if (token.Value == "*" ||
-                    token.Value == "^" ||
-                    token.Value == "/")
-                    op = Calc(token, previous, next, 0);
-
-                if (op)
-                {
-                    previous = null;
-                    next = null;
-                    i = -1;
-                    continue;
-                }
-                previous = token;
-            }
-
-            previous = null;
-            next = null;
-            for (int i = 0; i < _tokens.Count; i++)
-            {
-                var token = tokens[i];
-                next = (i + 1 < tokens.Count) ? tokens[i + 1] : null;
-                var op = false;
-                if (token.Value == "-" ||
-                    token.Value == "+")
-                    op = Calc(token, previous, next, 1);
-
-                if (op)
-                {
-                    previous = null;
-                    next = null;
-                    i = -1;
-                    continue;
-                }
-                previous = token;
-            }
-
-            previous = null;
-            next = null;
             for (int i = 0; i < _tokens.Count; i++)
             {
                 var token = tokens[i];
@@ -126,7 +47,40 @@
             return _tokens;
         }
 
-        private static bool Calc(Token? token, Token? previousToken, Token? nextToken, int iteration)
+        private static void OpimizeWrapper (Predicate<Token> predicate, Func<Token, Token, Token,int> opimise)
+        {
+            Token? previous = null;
+            Token? next = null;
+            for (int i = 0; i < _tokens.Count; i++)
+            {
+                var token = _tokens[i];
+                next = (i + 1 < _tokens.Count) ? _tokens[i + 1] : null;
+                if (predicate.Invoke(token))
+                    i -= opimise.Invoke(token, previous, next);
+
+                previous = token;
+            }
+        }
+
+        private static bool isOperation(Token token)
+        {
+            var tokenType = ArithmeticExpressionTokenizer.CheckTokenType(token.Value);
+            return tokenType == TokenType.operation;
+        }
+
+        private static bool isMul(Token token)
+        {
+            return token.Value == "*" ||
+                    token.Value == "^" ||
+                    token.Value == "/";
+        }
+        private static bool isAdd(Token token)
+        {
+            return token.Value == "-" ||
+                    token.Value == "+";
+        }
+
+        private static int Calc(Token? token, Token? previousToken, Token? nextToken)
         {
             if (previousToken!=null && ArithmeticExpressionTokenizer.CheckTokenType(previousToken?.Value) == TokenType.digit &&
                 nextToken != null && ArithmeticExpressionTokenizer.CheckTokenType(nextToken?.Value) == TokenType.digit)
@@ -143,27 +97,16 @@
                 }
 
                 double res = 0;
-
-                if (iteration == 0)
+                res = token.Value switch
                 {
-                    res = token.Value switch
-                    {
-                        "*" => left * right,
-                        "/" => left / right,
-                        "^" => Math.Pow(left, right),
-                    };
-                }
-                else
-                {
-                    res = token.Value switch
-                    {
-                        "+" => left + right,
-                        "-" => left - right,
-                    };
-                }
+                    "*" => left * right,
+                    "/" => left / right,
+                    "^" => Math.Pow(left, right),
+                    "+" => left + right,
+                    "-" => left - right,
+                };
 
                 _tokens.RemoveRange(removeStart, removeEnd - removeStart + 1);
-
                 if(res < 0 && removeStart - 1 >= 0 && _tokens[removeStart - 1].Value == "+")
                 {
                     _tokens[removeStart - 1].Value = "-";
@@ -172,31 +115,44 @@
 
                 _tokens.Insert(removeStart, new Token(removeStart, res.ToString(System.Globalization.CultureInfo.InvariantCulture)));
                 WriteOptimisation(OpimizeType.CalcConst);
-
-                return true;
+                Calculation.Add($"{left} {token.Value} {right} = {res}");
+                return 2;
             }
 
-            return false;
+            return 0;
         }
 
-        private static bool ZeroOneCalc(Token? token, Token? previousToken, Token? nextToken)
+        private static int ZeroOneCalc(Token? token, Token? previousToken, Token? nextToken)
         {
             if (token?.Value == "*" && (previousToken?.Value == "1" || nextToken?.Value == "1") ||
                 (token?.Value == "/" && nextToken?.Value == "1") ||
                 ((token?.Value == "-" || token?.Value == "+") && (previousToken?.Value == "0" || nextToken?.Value == "0") && previousToken?.Value != null)
                 )
             {
+                var i = _tokens.IndexOf(token);
                 var removeStart = _tokens.IndexOf(token);
                 var removeEnd = _tokens.IndexOf(token);
 
                 if (previousToken.Value == "1" || previousToken?.Value == "0")
                 {
                     removeStart = _tokens.IndexOf(previousToken);
+
+                    if (removeStart != 0)
+                    {
+                        removeStart--;
+                        removeEnd--;
+                    }
                 }
                 else if (nextToken?.Value == "1" || nextToken?.Value == "0")
                 {
                     removeEnd = _tokens.IndexOf(nextToken);
                 }
+
+                //if (removeStart != 0)
+                //{
+                //    removeStart--;
+                //    removeEnd++;
+                //}
 
                 _tokens.RemoveRange(removeStart, removeEnd - removeStart + 1);
 
@@ -218,19 +174,19 @@
                         break;
                 };
 
-                return true;
+                return i - removeStart;
             }
 
-            return false;
+            return 0;
         }
 
-        private static bool ZeroCalc(Token? token, Token? previousToken, Token? nextToken)
+        private static int ZeroCalc(Token? token, Token? previousToken, Token? nextToken)
         {
             if ((token?.Value == "*" || token?.Value == "/") && (previousToken?.Value == "0" || nextToken?.Value == "0"))
             {
                 if (token.Value == "/" && nextToken?.Value == "0")
                     throw new DivideByZeroException($"Ділення на 0, індекс {nextToken.Index}");
-
+                var i = _tokens.IndexOf(token);
                 var removeStart = _tokens.IndexOf(token);
                 var removeEnd = _tokens.IndexOf(token);
                 if (previousToken?.Value == ")")
@@ -256,18 +212,27 @@
                 else
                     removeEnd++;
 
-                var newTokenIndex = _tokens[removeStart].Index;
-                _tokens.RemoveRange(removeStart, removeEnd - removeStart + 1);
-                _tokens.Insert(removeStart, new Token(newTokenIndex, "0"));
+                while(removeStart-1>=0 &&(_tokens[removeStart-1].Value == "/" || _tokens[removeStart-1].Value == "*"))
+                {
+                    removeStart -= 2;
+                    if (previousToken?.Value == ")")
+                    {
+                        var previousTokenIndex = _tokens.IndexOf(previousToken);
+                        var openBrake = _tokens[..previousTokenIndex].Last(token => token.Value == "(");
+                        var openBrakeIndex = _tokens.IndexOf(openBrake);
+                        removeStart = openBrakeIndex;
+                    }
+                }
+                _tokens.RemoveRange(removeStart-1 >=0 ? removeStart-1:0, removeEnd - removeStart + 2);
                 if (token?.Value == "*")
                     WriteOptimisation(OpimizeType.MulZero);
                 else
                     WriteOptimisation(OpimizeType.DivideZero);
 
-                return true;
+                return i - removeStart ;
             }
 
-            return false;
+            return 0;
         }
 
         private static void WriteOptimisation(OpimizeType opimizeType)
