@@ -90,11 +90,7 @@
                 var left = Double.Parse(previousToken.Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture);
                 var right = Double.Parse(nextToken.Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture);
 
-                if(removeStart-1>=0 && _tokens[removeStart - 1].Value == "-")
-                {
-                    left *= -1;
-                    _tokens[removeStart - 1].Value = "+";
-                }
+  
 
                 if (_tokens.Count > (removeEnd + 1) &&
                     (token.Value == "+" || token.Value == "-") &&
@@ -105,6 +101,11 @@
                      _tokens[removeEnd + 1].Value == "^")
                     return 0;
 
+                if(removeStart-1>=0 && _tokens[removeStart - 1].Value == "-")
+                {
+                    left *= -1;
+                    _tokens[removeStart - 1].Value = "+";
+                }
                 double res = 0;
                 res = token.Value switch
                 {
