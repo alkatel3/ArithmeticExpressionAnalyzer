@@ -145,11 +145,18 @@
 
                 if (previousToken.Value == "1" || previousToken?.Value == "0")
                 {
+                    if ((i - 2) >= 0 && _tokens[i - 2].Value == "-")
+                        return 0;
+
                     removeStart = _tokens.IndexOf(previousToken);
 
-                    if (removeStart != 0)
+                    if (removeStart != 0 && _tokens[removeStart-1].Value != "(")
                     {
                         removeStart--;
+                        removeEnd--;
+                    }
+                    if (_tokens[removeEnd].Value == "-")
+                    {
                         removeEnd--;
                     }
                 }
@@ -158,11 +165,6 @@
                     removeEnd = _tokens.IndexOf(nextToken);
                 }
 
-                //if (removeStart != 0)
-                //{
-                //    removeStart--;
-                //    removeEnd++;
-                //}
 
                 _tokens.RemoveRange(removeStart, removeEnd - removeStart + 1);
 

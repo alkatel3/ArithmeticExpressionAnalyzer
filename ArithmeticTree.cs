@@ -31,6 +31,14 @@ namespace ArithmeticExpressionAnalyzer
                     return res;
                 }
 
+                if (isDiv)
+                {
+                    var res = new Node("/");
+                    res.SetLeftNode(new("1"));
+                    res.SetRightNode(new(tokens[0].Value));
+                    return res;
+                }
+
                 return new(tokens[0].Value);
             }
 
@@ -123,21 +131,51 @@ namespace ArithmeticExpressionAnalyzer
 
         public void DisplayTree()
         {
-            int initialX = Console.WindowWidth / 2;
-            DisplayNode(Root, initialX, Console.GetCursorPosition().Top + 1, Console.WindowWidth / 4);
+            if (Root.Deep > 10)
+                DisplayNode(Root, 0);
+            else
+            {
+                int initialX = Console.WindowWidth / 2;
+                DisplayNode(Root, initialX, Console.GetCursorPosition().Top + 1, Console.WindowWidth / 4);
+            }
+        }
+
+        private void DisplayNode(Node node, int tabs)
+        {
+            if (node == null)
+                return;
+ 
+            if(node.Right != null)
+            {
+                DisplayNode(node.Right, tabs+1);
+            }
+            Console.WriteLine((tabs-1 < 0 ? "" : new string('\t', tabs - 1) + "------ ") + node.Value);
+            if (node.Left != null)
+            {
+                DisplayNode(node.Left, tabs + 1);
+            }
         }
 
         private void DisplayNode(Node node, int x, int y, int offset)
         {
             if (node == null)
                 return;
+            //if ((x + offset / 2) >= Console.WindowWidth)
+            //{
+            //    // Розширюємо ширину буфера до x + 1, щоб забезпечити місце для нової позиції
+            //    Console.WindowWidth = x + offset / 2;
+            //}
 
             Console.SetCursorPosition(x, y);
             Console.Write(node.Value);
+            if (offset == 0 || offset == 1)
+            {
+                offset = 2;
+            }
             if (node.Left != null)
             {
                 Console.SetCursorPosition(x - offset / 2, y + 1);
-                Console.Write("/"); 
+                Console.Write("/");
                 DisplayNode(node.Left, x - offset, y + 2, offset / 2);
             }
 
