@@ -29,6 +29,14 @@ namespace ArithmeticExpressionAnalyzer
                 //Optimize Expression
                 var optimizedExpression = ArithmeticExpressionOptimizer.Optimize(tokens);
                 displayTokens(optimizedExpression);
+
+                ValidationRes = ArithmeticExpressionValidator.Validate(optimizedExpression);
+                if (ValidationRes != null && ValidationRes.Count() > 0)
+                {
+                    PrintErrors(ValidationRes, exp);
+                    continue;
+                }
+
                 displayOptimising();
                 Console.WriteLine();
                 //Expression Build Tree

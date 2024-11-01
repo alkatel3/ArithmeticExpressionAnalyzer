@@ -59,6 +59,7 @@
                 if (predicate.Invoke(token))
                     i -= opimise.Invoke(token, previous, next);
 
+                i = i >= _tokens.Count ? _tokens.Count - 1 : i;
                 previous = i < 0 ? null : _tokens[i];
             }
         }
@@ -145,16 +146,16 @@
 
                 if (previousToken.Value == "1" || previousToken?.Value == "0")
                 {
-                    if ((i - 2) >= 0 && _tokens[i - 2].Value == "-")
-                        return 0;
+                    //if ((i - 2) >= 0 && _tokens[i - 2].Value == "-")
+                    //    return 0;
 
                     removeStart = _tokens.IndexOf(previousToken);
 
-                    if (removeStart != 0 && _tokens[removeStart-1].Value != "(")
-                    {
-                        removeStart--;
-                        removeEnd--;
-                    }
+                    //if (removeStart != 0 && _tokens[removeStart-1].Value != "(")
+                    //{
+                    //    removeStart--;
+                    //    removeEnd--;
+                    //}
                     if (_tokens[removeEnd].Value == "-")
                     {
                         removeEnd--;
@@ -214,20 +215,31 @@
                 if (ArithmeticExpressionTokenizer.CheckTokenType(nextToken.Value) == TokenType.function)
                     nextToken = _tokens[_tokens.IndexOf(nextToken) + 1];
 
-                if(_tokens.Count > i+2 && (_tokens[i + 2].Value=="*" || _tokens[i + 2].Value == "/"))
-                {
-                    nextToken = _tokens[i + 3];
-                    if (token?.Value == "*")
-                        WriteOptimisation(OpimizeType.MulZero);
-                    else
-                        WriteOptimisation(OpimizeType.DivideZero);
-                }
+                //if(_tokens.Count > i+2 && (_tokens[i + 2].Value=="*" || _tokens[i + 2].Value == "/"))
+                //{
+                //    nextToken = _tokens[i + 3];
+                //    if (token?.Value == "*")
+                //        WriteOptimisation(OpimizeType.MulZero);
+                //    else
+                //        WriteOptimisation(OpimizeType.DivideZero);
+                //}
 
                 if (nextToken?.Value == "(")
                 {
                     var nextTokenIndex = _tokens.IndexOf(nextToken);
                     var closeBrake = _tokens[nextTokenIndex..].First(token => token.Value == ")");
                     var closeBrakeIndex = _tokens.IndexOf(closeBrake);
+                    if (_tokens[nextTokenIndex..closeBrakeIndex].Any(t => t.Value == "(")){
+                        var brakeCount = _tokens[(nextTokenIndex+1)..closeBrakeIndex].Count(t => t.Value == "(");
+
+                        while (brakeCount > 0)
+                        {
+                            closeBrake = _tokens[(closeBrakeIndex+1)..].First(token => token.Value == ")");
+                            closeBrakeIndex = _tokens.IndexOf(closeBrake);
+                            brakeCount--;
+                        }
+                    }
+
                     removeEnd = closeBrakeIndex;
                 }
                 else
@@ -244,6 +256,24 @@
                         removeStart = openBrakeIndex;
                     }
                 }
+
+                if (_tokens.Count>(removeEnd + 1) && (_tokens[removeEnd+1].Value == "/" || _tokens[removeEnd+1].Value == "*"))
+                {
+                    removeStart+=2;
+                    i++;
+                }
+
+                if (_tokens.Count > (removeEnd + 1) && _tokens[removeEnd + 1].Value == "^")
+                {
+                    removeStart += 2;
+                }
+
+
+                if (_tokens.Count > (removeEnd + 1) && _tokens[removeEnd + 1].Value == "-" && (removeStart==0 || _tokens[removeStart].Value == "("))
+                {
+                    removeEnd--;
+                }
+
                 _tokens.RemoveRange(removeStart-1 >=0 ? removeStart-1:0,
                     (removeEnd - removeStart + 2)>_tokens.Count ? _tokens.Count : (removeEnd - removeStart + 2));
                 if (token?.Value == "*")
