@@ -22,6 +22,8 @@ namespace ArithmeticExpressionAnalyzer
                 if (ValidationRes != null && ValidationRes.Count() > 0)
                 {
                     PrintErrors(ValidationRes, exp);
+                    Console.ReadKey();
+                    Console.Clear();
                     continue;
                 }
 
@@ -33,7 +35,10 @@ namespace ArithmeticExpressionAnalyzer
                 ValidationRes = ArithmeticExpressionValidator.Validate(optimizedExpression);
                 if (ValidationRes != null && ValidationRes.Count() > 0)
                 {
-                    PrintErrors(ValidationRes, exp);
+                    Console.WriteLine();
+                    Console.WriteLine("Оптимізований вираз містить помилки");
+                    Console.ReadKey();
+                    Console.Clear();
                     continue;
                 }
 

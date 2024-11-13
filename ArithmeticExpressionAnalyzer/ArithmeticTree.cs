@@ -10,7 +10,6 @@ namespace ArithmeticExpressionAnalyzer
         public Node Root { get; set; }
         private string[] add = { "-", "+" };
         private string[] mul = { "*", "/" };
-        private string[] pow = { "^" };
 
         public void BuildTree(List<Token> tokens)
         {
@@ -47,7 +46,7 @@ namespace ArithmeticExpressionAnalyzer
             Node node, left, right;
             Token val = null;
             List<int> propNode = new List<int>();
-            List<string[]> operations = new List<string[]> { add, mul, pow };
+            List<string[]> operations = new List<string[]> { add, mul };
             for(int i = 0; i < operations.Count; i++)
             {
                 var brakes = 0;

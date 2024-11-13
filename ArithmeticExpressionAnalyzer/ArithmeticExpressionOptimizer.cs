@@ -26,7 +26,6 @@
 
             OpimizeWrapper(isOperation, ZeroCalc);
             OpimizeWrapper(isOperation, ZeroOneCalc);
-            OpimizeWrapper(token => token.Value == "^", Calc);
             OpimizeWrapper(isMul, Calc);
             OpimizeWrapper(isAdd, Calc);
 
@@ -95,11 +94,11 @@
 
                 if (_tokens.Count > (removeEnd + 1) &&
                     (token.Value == "+" || token.Value == "-") &&
-                    (_tokens[removeEnd + 1].Value == "*" || _tokens[removeEnd + 1].Value == "/" || _tokens[removeEnd + 1].Value == "^"))
+                    (_tokens[removeEnd + 1].Value == "*" || _tokens[removeEnd + 1].Value == "/"))
                     return 0;
                 else if (_tokens.Count > (removeEnd + 1) &&
-                    (token.Value == "*" || token.Value == "/") &&
-                     _tokens[removeEnd + 1].Value == "^")
+                    (token.Value == "*" || token.Value == "/") 
+                     )
                     return 0;
 
                 if(removeStart-1>=0 && _tokens[removeStart - 1].Value == "-")
@@ -112,7 +111,6 @@
                 {
                     "*" => left * right,
                     "/" => left / right,
-                    "^" => Math.Pow(left, right),
                     "+" => left + right,
                     "-" => left - right,
                 };
@@ -146,16 +144,8 @@
 
                 if (previousToken.Value == "1" || previousToken?.Value == "0")
                 {
-                    //if ((i - 2) >= 0 && _tokens[i - 2].Value == "-")
-                    //    return 0;
-
                     removeStart = _tokens.IndexOf(previousToken);
 
-                    //if (removeStart != 0 && _tokens[removeStart-1].Value != "(")
-                    //{
-                    //    removeStart--;
-                    //    removeEnd--;
-                    //}
                     if (_tokens[removeEnd].Value == "-")
                     {
                         removeEnd--;
@@ -199,45 +189,62 @@
             {
                 if (token.Value == "/" && nextToken?.Value == "0")
                     throw new DivideByZeroException($"Ділення на 0, індекс {nextToken.Index}");
+
                 var i = _tokens.IndexOf(token);
-                var removeStart = _tokens.IndexOf(token);
-                var removeEnd = _tokens.IndexOf(token);
+                var removeStart = i;
+                var removeEnd = i;
                 if (previousToken?.Value == ")")
                 {
                     var previousTokenIndex = _tokens.IndexOf(previousToken);
                     var openBrake = _tokens[..previousTokenIndex].Last(token => token.Value == "(");
                     var openBrakeIndex = _tokens.IndexOf(openBrake);
-                    removeStart = openBrakeIndex;
+                    var brakeCount = 0;
+
+                    while (_tokens[openBrakeIndex..previousTokenIndex].Any(t => t.Value == ")"))
+                    {
+                        var brakeCountTemp = _tokens[openBrakeIndex..(previousTokenIndex)].Count(t => t.Value == ")") - brakeCount;
+                        brakeCount += brakeCountTemp;
+
+                        if (brakeCountTemp == 0)
+                            break;
+
+                        while (brakeCountTemp > 0)
+                        {
+                            openBrake = _tokens[..openBrakeIndex].Last(token => token.Value == "(");
+                            openBrakeIndex = _tokens.IndexOf(openBrake);
+                            brakeCountTemp--;
+                        }
+
+                    }
+
+                    removeStart = openBrakeIndex == 0 ? 0 : openBrakeIndex - 1;
                 }
                 else
-                    removeStart -= 1;
+                    removeStart -= (removeStart==1 || _tokens[removeStart-2].Value=="(") ? 1 : 2 ;
 
                 if (ArithmeticExpressionTokenizer.CheckTokenType(nextToken.Value) == TokenType.function)
                     nextToken = _tokens[_tokens.IndexOf(nextToken) + 1];
-
-                //if(_tokens.Count > i+2 && (_tokens[i + 2].Value=="*" || _tokens[i + 2].Value == "/"))
-                //{
-                //    nextToken = _tokens[i + 3];
-                //    if (token?.Value == "*")
-                //        WriteOptimisation(OpimizeType.MulZero);
-                //    else
-                //        WriteOptimisation(OpimizeType.DivideZero);
-                //}
 
                 if (nextToken?.Value == "(")
                 {
                     var nextTokenIndex = _tokens.IndexOf(nextToken);
                     var closeBrake = _tokens[nextTokenIndex..].First(token => token.Value == ")");
                     var closeBrakeIndex = _tokens.IndexOf(closeBrake);
-                    if (_tokens[nextTokenIndex..closeBrakeIndex].Any(t => t.Value == "(")){
-                        var brakeCount = _tokens[(nextTokenIndex+1)..closeBrakeIndex].Count(t => t.Value == "(");
+                    var brakeCount = 0;
+                    while (_tokens[nextTokenIndex..closeBrakeIndex].Any(t => t.Value == "(")){
+                        var brakeCountTemp = _tokens[(nextTokenIndex+1)..closeBrakeIndex].Count(t => t.Value == "(") - brakeCount;
+                        brakeCount += brakeCountTemp;
 
-                        while (brakeCount > 0)
+                        if (brakeCountTemp == 0)
+                            break;
+
+                        while (brakeCountTemp > 0)
                         {
                             closeBrake = _tokens[(closeBrakeIndex+1)..].First(token => token.Value == ")");
                             closeBrakeIndex = _tokens.IndexOf(closeBrake);
-                            brakeCount--;
+                            brakeCountTemp--;
                         }
+
                     }
 
                     removeEnd = closeBrakeIndex;
@@ -263,19 +270,24 @@
                     i++;
                 }
 
-                if (_tokens.Count > (removeEnd + 1) && _tokens[removeEnd + 1].Value == "^")
-                {
-                    removeStart += 2;
-                }
-
-
-                if (_tokens.Count > (removeEnd + 1) && _tokens[removeEnd + 1].Value == "-" && (removeStart==0 || _tokens[removeStart].Value == "("))
+                if (_tokens.Count > (removeEnd + 1) && _tokens[removeEnd + 1].Value == "-" && (removeStart == 0 || _tokens[removeStart].Value == "("))
                 {
                     removeEnd--;
                 }
 
-                _tokens.RemoveRange(removeStart-1 >=0 ? removeStart-1:0,
-                    (removeEnd - removeStart + 2)>_tokens.Count ? _tokens.Count : (removeEnd - removeStart + 2));
+                while (removeStart>0 && _tokens[removeStart-1].Value == "(" &&
+                    removeEnd+1 < _tokens.Count && _tokens[removeEnd + 1].Value == ")"){
+                    removeEnd++;
+                    removeStart--;
+                }
+
+                if (_tokens.Count > (removeEnd + 1) && _tokens[removeEnd + 1].Value == "+" && (removeStart==0 || _tokens[removeStart - 1].Value == "("))
+                {
+                    removeEnd++;
+                }
+
+                _tokens.RemoveRange(removeStart,
+                    (removeEnd - removeStart + 1)>_tokens.Count ? _tokens.Count : (removeEnd - removeStart + 1));
                 if (token?.Value == "*")
                     WriteOptimisation(OpimizeType.MulZero);
                 else

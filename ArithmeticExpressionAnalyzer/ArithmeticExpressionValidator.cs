@@ -20,6 +20,7 @@
         public static List<(int index, string token, string message)> Validate(List<Token> tokens)
         {
             errors.Clear();
+            brakes.Clear();
             string? previous = null;
             for (int i = 0; i < tokens.Count; i++)
             {
