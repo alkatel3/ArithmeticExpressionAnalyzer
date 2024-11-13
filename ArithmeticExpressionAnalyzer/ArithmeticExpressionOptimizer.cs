@@ -58,7 +58,7 @@
                 if (predicate.Invoke(token))
                     i -= opimise.Invoke(token, previous, next);
 
-                i = i >= _tokens.Count ? _tokens.Count - 1 : i;
+                i = i >= _tokens.Count || i < 0 ? _tokens.Count - 1 : i;
                 previous = i < 0 ? null : _tokens[i];
             }
         }
@@ -195,7 +195,7 @@
                 var removeEnd = i;
                 if (previousToken?.Value == ")")
                 {
-                    var previousTokenIndex = _tokens.IndexOf(previousToken);
+                     var previousTokenIndex = _tokens.IndexOf(previousToken);
                     var openBrake = _tokens[..previousTokenIndex].Last(token => token.Value == "(");
                     var openBrakeIndex = _tokens.IndexOf(openBrake);
                     var brakeCount = 0;
@@ -264,12 +264,6 @@
                     }
                 }
 
-                if (_tokens.Count>(removeEnd + 1) && (_tokens[removeEnd+1].Value == "/" || _tokens[removeEnd+1].Value == "*"))
-                {
-                    removeStart+=2;
-                    i++;
-                }
-
                 if (_tokens.Count > (removeEnd + 1) && _tokens[removeEnd + 1].Value == "-" && (removeStart == 0 || _tokens[removeStart].Value == "("))
                 {
                     removeEnd--;
@@ -279,6 +273,12 @@
                     removeEnd+1 < _tokens.Count && _tokens[removeEnd + 1].Value == ")"){
                     removeEnd++;
                     removeStart--;
+                }
+                
+                if (_tokens.Count>(removeEnd + 1) && (_tokens[removeEnd+1].Value == "/" || _tokens[removeEnd+1].Value == "*"))
+                {
+                    removeEnd += 2;
+                    i++;
                 }
 
                 if (_tokens.Count > (removeEnd + 1) && _tokens[removeEnd + 1].Value == "+" && (removeStart==0 || _tokens[removeStart - 1].Value == "("))
