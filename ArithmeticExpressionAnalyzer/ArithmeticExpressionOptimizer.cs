@@ -267,18 +267,6 @@
                 else
                     removeEnd++;
 
-                while(removeStart-1>=0 &&(_tokens[removeStart-1].Value == "/" || _tokens[removeStart-1].Value == "*"))
-                {
-                    removeStart -= 2;
-                    if (previousToken?.Value == ")")
-                    {
-                        var previousTokenIndex = _tokens.IndexOf(previousToken);
-                        var openBrake = _tokens[..previousTokenIndex].Last(token => token.Value == "(");
-                        var openBrakeIndex = _tokens.IndexOf(openBrake);
-                        removeStart = openBrakeIndex;
-                    }
-                }
-
                 while (removeStart>0 && _tokens[removeStart-1].Value == "(" &&
                     removeEnd+1 < _tokens.Count && _tokens[removeEnd + 1].Value == ")" &&
                     (removeStart - 1 == 0 || removeStart - 1 > 0 && ArithmeticExpressionTokenizer.CheckTokenType(_tokens[removeStart - 2].Value) != TokenType.function)){

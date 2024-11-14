@@ -99,6 +99,7 @@ namespace ArithmeticExpressionOptimizerTest
         [DataRow("0+(A+0/B)*C", "A*C")]
         [DataRow("0-(A*B+C/D)", "0-(A*B+C/D)")]
         [DataRow("A*(B+0)-C", "A*B-C")]
+        [DataRow("(a+b+5)*2+0*(0/5-(6+3+d))", "(a+b+5)*2")]
         public void ZeroMul(string exp, string expectedResult)
         {
             //Arrange
@@ -195,6 +196,8 @@ namespace ArithmeticExpressionOptimizerTest
         [TestMethod]
         [DataRow("2*3+1", "7")]
         [DataRow("4+5*2", "14")]
+        [DataRow("4-5*2", "-6")]
+        [DataRow("4/5*2", "1.6")]
         public void CalculateConstantTest(string expression, string expected)
         {
             var tokens = tokenizer.Tokenize(expression);
