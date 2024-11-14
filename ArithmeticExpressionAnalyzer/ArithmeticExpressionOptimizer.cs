@@ -24,6 +24,17 @@
             Calculation = new();
             _tokens = tokens;
 
+            for(int i = 1; i < _tokens.Count - 1; i++)
+            {
+                if (_tokens[i - 1].Value == "(" && _tokens[i + 1].Value == ")" &&
+                    (i == 1 || i - 2 >= 0 && ArithmeticExpressionTokenizer.CheckTokenType(_tokens[i - 2].Value) != TokenType.function))
+                {
+                    var temp = _tokens[i];
+                    _tokens.RemoveRange(i - 1, 3);
+                    _tokens.Insert(i - 1, temp);
+                }
+            }
+
             OpimizeWrapper(isOperation, ZeroCalc);
             OpimizeWrapper(isOperation, ZeroOneCalc);
             OpimizeWrapper(isMul, Calc);
@@ -44,6 +55,17 @@
                 previous = token;
             }
 
+            for (int i = 1; i < _tokens.Count - 1; i++)
+            {
+                if (_tokens[i - 1].Value == "(" && _tokens[i + 1].Value == ")" &&
+                    (i == 1 || i - 2 >= 0 && ArithmeticExpressionTokenizer.CheckTokenType(_tokens[i - 2].Value) != TokenType.function))
+                {
+                    var temp = _tokens[i];
+                    _tokens.RemoveRange(i - 1, 3);
+                    _tokens.Insert(i - 1, temp);
+                }
+            }
+
             return _tokens;
         }
 
@@ -58,7 +80,7 @@
                 if (predicate.Invoke(token))
                     i -= opimise.Invoke(token, previous, next);
 
-                i = i >= _tokens.Count || i < 0 ? _tokens.Count - 1 : i;
+                i = i >= _tokens.Count || i < 0 ? 0 : i;
                 previous = i < 0 ? null : _tokens[i];
             }
         }
@@ -90,16 +112,6 @@
                 var left = Double.Parse(previousToken.Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture);
                 var right = Double.Parse(nextToken.Value, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture);
 
-  
-
-                if (_tokens.Count > (removeEnd + 1) &&
-                    (token.Value == "+" || token.Value == "-") &&
-                    (_tokens[removeEnd + 1].Value == "*" || _tokens[removeEnd + 1].Value == "/"))
-                    return 0;
-                else if (_tokens.Count > (removeEnd + 1) &&
-                    (token.Value == "*" || token.Value == "/") 
-                     )
-                    return 0;
 
                 if(removeStart-1>=0 && _tokens[removeStart - 1].Value == "-")
                 {
@@ -142,7 +154,7 @@
                 var removeStart = _tokens.IndexOf(token);
                 var removeEnd = _tokens.IndexOf(token);
 
-                if (previousToken.Value == "1" || previousToken?.Value == "0")
+                if ((previousToken.Value == "1" && token.Value == "*") || previousToken?.Value == "0")
                 {
                     removeStart = _tokens.IndexOf(previousToken);
 
@@ -177,7 +189,7 @@
                         break;
                 };
 
-                return i - removeStart+1;
+                return i - removeStart;
             }
 
             return 0;
@@ -217,10 +229,13 @@
 
                     }
 
-                    removeStart = openBrakeIndex == 0 ? 0 : openBrakeIndex - 1;
+                    removeStart = openBrakeIndex == 0 ? 0 : openBrakeIndex;
+
+                    if (removeStart > 0 && ArithmeticExpressionTokenizer.CheckTokenType(_tokens[removeStart - 1].Value) == TokenType.function)
+                        removeStart--;
                 }
                 else
-                    removeStart -= (removeStart==1 || _tokens[removeStart-2].Value=="(") ? 1 : 2 ;
+                    removeStart -= (removeStart==1 || _tokens[removeStart-2].Value=="(") ? 1 : 1 ;
 
                 if (ArithmeticExpressionTokenizer.CheckTokenType(nextToken.Value) == TokenType.function)
                     nextToken = _tokens[_tokens.IndexOf(nextToken) + 1];
@@ -264,36 +279,22 @@
                     }
                 }
 
-                if (_tokens.Count > (removeEnd + 1) && _tokens[removeEnd + 1].Value == "-" && (removeStart == 0 || _tokens[removeStart].Value == "("))
-                {
-                    removeEnd--;
-                }
-
                 while (removeStart>0 && _tokens[removeStart-1].Value == "(" &&
-                    removeEnd+1 < _tokens.Count && _tokens[removeEnd + 1].Value == ")"){
+                    removeEnd+1 < _tokens.Count && _tokens[removeEnd + 1].Value == ")" &&
+                    (removeStart - 1 == 0 || removeStart - 1 > 0 && ArithmeticExpressionTokenizer.CheckTokenType(_tokens[removeStart - 2].Value) != TokenType.function)){
                     removeEnd++;
                     removeStart--;
-                }
-                
-                if (_tokens.Count>(removeEnd + 1) && (_tokens[removeEnd+1].Value == "/" || _tokens[removeEnd+1].Value == "*"))
-                {
-                    removeEnd += 2;
-                    i++;
-                }
-
-                if (_tokens.Count > (removeEnd + 1) && _tokens[removeEnd + 1].Value == "+" && (removeStart==0 || _tokens[removeStart - 1].Value == "("))
-                {
-                    removeEnd++;
                 }
 
                 _tokens.RemoveRange(removeStart,
                     (removeEnd - removeStart + 1)>_tokens.Count ? _tokens.Count : (removeEnd - removeStart + 1));
+                _tokens.Insert(removeStart, new Token(removeStart, "0"));
                 if (token?.Value == "*")
                     WriteOptimisation(OpimizeType.MulZero);
                 else
                     WriteOptimisation(OpimizeType.DivideZero);
 
-                return i - removeStart +1;
+                return i - removeStart +2;
             }
 
             return 0;
