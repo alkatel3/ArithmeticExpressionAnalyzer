@@ -76,7 +76,7 @@ namespace ArithmeticExpressionAnalyzer
             return Regex.IsMatch(token, $@"{Variables}");
         }
 
-        private static bool IsFunction(string token)
+        public static bool IsFunction(string token)
         {
             return Regex.IsMatch(token, $@"\b(?:{string.Join('|', Funstions)})\b");
         }
