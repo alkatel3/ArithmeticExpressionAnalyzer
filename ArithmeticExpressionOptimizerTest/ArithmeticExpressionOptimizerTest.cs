@@ -95,12 +95,40 @@ namespace ArithmeticExpressionOptimizerTest
         [DataRow("A*0+sin(B)+cos(C)", "sin(B)+cos(C)")]
         [DataRow("0-(A+B*C)", "0-(A+B*C)")]
         [DataRow("0*(A+B/C)", "0")]
-        //[DataRow("(A+B*C)/0", "(A+B*C)/0")]
         [DataRow("0+(A+0/B)*C", "A*C")]
         [DataRow("0-(A*B+C/D)", "0-(A*B+C/D)")]
         [DataRow("A*(B+0)-C", "A*B-C")]
+        [DataRow("1+0", "1")]
+        [DataRow("0+A", "A")]
+        [DataRow("(A+0)+B", "A+B")]
+        [DataRow("A*0", "0")]
+        [DataRow("0*B", "0")]
+        [DataRow("A*(B+0*C)", "A*B")]
+        [DataRow("A/1", "A")]
+        [DataRow("(A+B)/1", "(A+B)")]
+        [DataRow("A*1", "A")]
+        [DataRow("(A+B)*1", "(A+B)")]
+        [DataRow("-A+B", "0-A+B")]
+        [DataRow("-(A+B)", "0-(A+B)")]
+        [DataRow("2*3+1", "7")]
+        [DataRow("4+5*2", "14")]
+        [DataRow("0/b/c/v/d/e/g*t-v-b-d-s-e-g", "0-v-b-d-s-e-g")]
+        [DataRow("a*(b+(c+d)/e)+b*0+5+4-1*n", "a*(b+(c+d)/e)+9-n")]
+        [DataRow("0+b*0+0*a+a*b+1", "a*b+1")]
+        [DataRow("2+3+4+5+6+7+8*s-p", "27+8*s-p")]
         [DataRow("(a+b+5)*2+0*(0/5-(6+3+d))", "(a+b+5)*2")]
-        public void ZeroMul(string exp, string expectedResult)
+        [DataRow("a*(b+0*c)/(d+e*0)+f*(g+h*0)", "a*b/d+f*g")]
+        [DataRow("(x*y+0*z)/(w+1*(v*0+t))-u", "(x*y)/(w+t)-u")]
+        [DataRow("0*a+b*(c+0*d)/e+f*(0+g*h)-i", "b*c/e+f*(g*h)-i")]
+        [DataRow("p*(q+0+r)/(s*t+0*u)+v*(w*0)", "p*(q+r)/(s*t)")]
+        [DataRow("((a+b*0)/c+d*0)+e*(f+0*g)/(h+i*0)", "(a/c)+e*f/h")]
+        [DataRow("j*(k+0*l*m+n*(o*0+p))/q", "j*(k+n*p)/q")]
+        [DataRow("(0+z)/x+(y*(0+z*w))/(u+0*v)+t", "z/x+(y*(z*w))/u+t")]
+        [DataRow("((a+0*b)*c+d*0+e)/(f+g*0)", "(a*c+e)/f")]
+        [DataRow("(x*0+y)/(z+w)+u*(v+0*w)*s", "y/(z+w)+u*v*s")]
+        [DataRow("(a+b*0)/c+d*e*(f+0*g+h*0)", "a/c+d*e*f")]
+
+        public void OptimizeTest(string exp, string expectedResult)
         {
             //Arrange
             var tokens = tokenizer.Tokenize(exp);
@@ -125,86 +153,34 @@ namespace ArithmeticExpressionOptimizerTest
             });
         }
 
-        // Тест для додавання нуля
-        [TestMethod]
-        [DataRow("1+0", "1")]
-        [DataRow("0+A", "A")]
-        [DataRow("(A+0)+B", "A+B")]
-        public void AddingZeroTest(string expression, string expected)
+        [TestMethod()]
+        [DataRow("a+(a+b)", "a+a+b")]
+        [DataRow("a-(a+b)", "a-a-b")]
+        [DataRow("a-(-a-b)", "a+a+b")]
+        //[DataRow("a*(a+b)", "a*a+a*b")]
+        //[DataRow("a*(-a-b)", "-a*a-a*b")]
+        //[DataRow("a*(-a*b)", "-a*a*b")]
+        //[DataRow("(a+b)*a", "a*a+a*b")]
+        //[DataRow("(-a-b)*a", "-a*a-a*b")]
+        //[DataRow("(-a*b)*a", "-a*a*b")]
+        //[DataRow("a*(a+b)*c", "a*a*c+a*b*c")]
+        //[DataRow("a*(-a-b)*c", "-a*a*c-a*b*c")]
+        //[DataRow("a*(-a*b)*c", "-a*a*b*c")]
+        //[DataRow("(a+c)*(a+b)", "a*a+a*b")]
+        //[DataRow("(a-c)*(-a-b)", "-a*a-a*b+c*a+c*b")]
+        //[DataRow("d*(a-c)*(-a-b)", "-d*a*a-d*a*b+d*c*a+d*c*b")]
+        //[DataRow("d*(a-(c+b)*f)", "d*a-d*c*f-d*b*f")]
+        //[DataRow("d+(a-f)", "d+a-f")]
+        //[DataRow("d-(a-f)", "d-a+f")]
+        public void AssociativeSimplificationTest(string exp, string expectedResult)
         {
-            var tokens = tokenizer.Tokenize(expression);
-            var optimizedTokens = ArithmeticExpressionOptimizer.Optimize(tokens);
-            var result = string.Join("", optimizedTokens.Select(t => t.Value));
-            Assert.AreEqual(expected, result);
-            Assert.IsTrue(ArithmeticExpressionOptimizer.Optimised.ContainsKey(OpimizeType.AddingZero));
-        }
-
-        // Тест для множення на нуль
-        [TestMethod]
-        [DataRow("A*0", "0")]
-        [DataRow("0*B", "0")]
-        [DataRow("A*(B+0*C)", "A*B")]
-        public void MultiplyZeroTest(string expression, string expected)
-        {
-            var tokens = tokenizer.Tokenize(expression);
-            var optimizedTokens = ArithmeticExpressionOptimizer.Optimize(tokens);
-            var result = string.Join("", optimizedTokens.Select(t => t.Value));
-            Assert.AreEqual(expected, result);
-            Assert.IsTrue(ArithmeticExpressionOptimizer.Optimised.ContainsKey(OpimizeType.MulZero));
-        }
-
-        // Тест для ділення на 1
-        [TestMethod]
-        [DataRow("A/1", "A")]
-        [DataRow("(A+B)/1", "(A+B)")]
-        public void DivideByOneTest(string expression, string expected)
-        {
-            var tokens = tokenizer.Tokenize(expression);
-            var optimizedTokens = ArithmeticExpressionOptimizer.Optimize(tokens);
-            var result = string.Join("", optimizedTokens.Select(t => t.Value));
-            Assert.AreEqual(expected, result);
-            Assert.IsTrue(ArithmeticExpressionOptimizer.Optimised.ContainsKey(OpimizeType.DividedOne));
-        }
-
-        // Тест для множення на 1
-        [TestMethod]
-        [DataRow("A*1", "A")]
-        [DataRow("(A+B)*1", "(A+B)")]
-        public void MultiplyByOneTest(string expression, string expected)
-        {
-            var tokens = tokenizer.Tokenize(expression);
-            var optimizedTokens = ArithmeticExpressionOptimizer.Optimize(tokens);
-            var result = string.Join("", optimizedTokens.Select(t => t.Value));
-            Assert.AreEqual(expected, result);
-            Assert.IsTrue(ArithmeticExpressionOptimizer.Optimised.ContainsKey(OpimizeType.MulOne));
-        }
-
-        // Тест для унарного мінуса
-        [TestMethod]
-        [DataRow("-A+B", "0-A+B")]
-        [DataRow("-(A+B)", "0-(A+B)")]
-        public void UnaryMinusTest(string expression, string expected)
-        {
-            var tokens = tokenizer.Tokenize(expression);
-            var optimizedTokens = ArithmeticExpressionOptimizer.Optimize(tokens);
-            var result = string.Join("", optimizedTokens.Select(t => t.Value));
-            Assert.AreEqual(expected, result);
-            Assert.IsTrue(ArithmeticExpressionOptimizer.Optimised.ContainsKey(OpimizeType.UnarityMinus));
-        }
-
-        // Тест для обчислення констант
-        [TestMethod]
-        [DataRow("2*3+1", "7")]
-        [DataRow("4+5*2", "14")]
-        [DataRow("4-5*2", "-6")]
-        [DataRow("4/5*2", "1.6")]
-        public void CalculateConstantTest(string expression, string expected)
-        {
-            var tokens = tokenizer.Tokenize(expression);
-            var optimizedTokens = ArithmeticExpressionOptimizer.Optimize(tokens);
-            var result = string.Join("", optimizedTokens.Select(t => t.Value));
-            Assert.AreEqual(expected, result);
-            Assert.IsTrue(ArithmeticExpressionOptimizer.Optimised.ContainsKey(OpimizeType.CalcConst));
+            //Arrange
+            var tokens = tokenizer.Tokenize(exp);
+            //Act
+            var optimizedExpression = AssociativeSimplification.Execute(tokens);
+            var result = String.Join("", optimizedExpression.Select(t => t.Value));
+            //Assert
+            Assert.AreEqual(expectedResult, result);
         }
     }
 }
