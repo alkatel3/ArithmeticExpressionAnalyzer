@@ -99,27 +99,65 @@ namespace ArithmeticExpressionAnalyzer
 
             if(openBrakeIndex == 0)
             {
-                right = GetRightOperand(tokens[(closeBrakeIndex + 2)..]);
-                mul = GetMul(subExpression, right);
+                if (tokens[closeBrakeIndex + 1].Value == "*")
+                {
+                    right = GetRightOperand(tokens[(closeBrakeIndex + 2)..]).Item1;
+                    mul = GetMul(subExpression, right);
+                }
+                else
+                {
+                    right = GetRightOperand(tokens[(closeBrakeIndex + 2)..], true).Item1;
+                    mul = new List<Token>();
+                    if (subExpression.Count > 1)
+                    {
+                        mul.Add(new Token(-1, "("));
+                        mul.AddRange(subExpression);
+                        mul.Add(new Token(-1, ")"));
+                    }
+                    else
+                        mul.AddRange(subExpression);
+
+                    mul.Add(new Token(-1, "/"));
+                    if (right.Count > 1)
+                    {
+                        mul.Add(new Token(-1, "("));
+                        mul.AddRange(right);
+                        mul.Add(new Token(-1, ")"));
+                    }
+                    else
+                        mul.AddRange(right);
+
+                }
+
                 res.AddRange(mul);
-                return right.Count + 1;
+                return right.Count + tokens[(closeBrakeIndex + 2)..].Count(t=>t.Value == "(") + 2;
             }
 
             switch (tokens[openBrakeIndex - 1].Value)
             {
                 case "-":
+                    var brakes = 0;
                     subExpression.ForEach(t =>
                     {
-                        switch (t.Value)
+                        if (t.Value == "(")
+                            brakes++;
+                        else if (t.Value == ")")
+                            brakes--;
+
+                        if (brakes == 0)
                         {
-                            case "-":
-                                t.Value = "+";
-                                break;
-                            case "+":
-                                t.Value = "-";
-                                break;
+                            switch (t.Value)
+                            {
+                                case "-":
+                                    t.Value = "+";
+                                    break;
+                                case "+":
+                                    t.Value = "-";
+                                    break;
+                            }
                         }
                     });
+
                     if (subExpression[0].Value == "+")
                     {
                         res.RemoveAt(res.Count - 1);
@@ -127,70 +165,144 @@ namespace ArithmeticExpressionAnalyzer
                             subExpression.RemoveAt(0);
                     }
 
-                    right = GetRightOperand(tokens[(closeBrakeIndex + 2)..]);
+                    right = GetRightOperand(tokens[(closeBrakeIndex + 2)..]).Item1;
                     mul = GetMul(subExpression, right);
                     res.AddRange(mul);
                     return right.Count+1;
                 case "+":
-                    right = GetRightOperand(tokens[(closeBrakeIndex+2)..]);
+                    right = GetRightOperand(tokens[(closeBrakeIndex+2)..]).Item1;
                     mul = GetMul(subExpression, right);
                     res.AddRange(mul);
                     return right.Count + 1;
                 case "*":
                     left = GetLeftOperand(res[..(res.Count - 1)]);
                     mul = GetMul(left, subExpression);
-                    right = GetRightOperand(tokens[(closeBrakeIndex + 2)..]);
+                    right = GetRightOperand(tokens[(closeBrakeIndex + 2)..]).Item1;
                     mul = GetMul(mul, right);
                     res.RemoveRange(res.Count - left.Count - 1, left.Count + 1);
                     res.AddRange(mul);
-                    return right.Count + 1;
+                    return right.Count + 2;
+                case "/":
+                    //left = GetLeftOperand(res[..(res.Count - 1)]);
+                    var temp = GetRightOperand(tokens[openBrakeIndex..], true);
+                    right = temp.Item1;
+                    res.Add(new Token(-1, "("));
+                    res.AddRange(right);
+                    res.Add(new Token(-1, ")"));
+                    return temp.Item2;
             }
             return 0;
         }
 
-        private static List<Token> GetRightOperand(List<Token> tokens)
+        private static (List<Token>,int) GetRightOperand(List<Token> tokens, bool isDiv=false)
         {
             var next = tokens.FirstOrDefault(t => t.Value == "+" || t.Value == "-");
+            var bias = 0;
 
             if (next is null)
             {
-                return tokens;
+                if (isDiv)
+                    bias = ReplaseDivToMul(tokens);
+
+                return (subExpressionProcess(tokens), bias);
             }
 
             var ind = tokens.IndexOf(next);
 
-            while (tokens[ind..].Count(t => t.Value == "(") != tokens[ind..].Count(t => t.Value == "("))
+            while (tokens[..ind].Count(t => t.Value == "(") != tokens[..ind].Count(t => t.Value == ")"))
             {
-                next = tokens.FirstOrDefault(t => t.Value == "+" || t.Value == "-");
+                next = tokens[(ind+1)..].FirstOrDefault(t => t.Value == "+" || t.Value == "-");
 
                 if (next is null)
                 {
-                    return tokens;
+                    if (isDiv)
+                        bias = ReplaseDivToMul(tokens);
+
+                    return (subExpressionProcess(tokens), bias);
                 }
 
                 ind = tokens.IndexOf(next);
             }
 
-            return tokens[..ind];
+            if (isDiv)
+                bias = ReplaseDivToMul(tokens[..ind]);
+
+            return (subExpressionProcess(tokens[..ind]), bias);
+        }
+
+        private static int ReplaseDivToMul(List<Token> tokens)
+        {
+            var indDiv = GetDivIndex(tokens);
+            if (indDiv != -1)
+            {
+                var indLeftDiv = GetDivIndex(tokens[..indDiv]);
+                tokens[indDiv].Value = "*";
+
+                if (indLeftDiv == -1)
+                    tokens.Insert(0, new Token(-1, "("));
+                else
+                    tokens.Insert(indLeftDiv + 1, new Token(-1, "("));
+
+                tokens.Add(new Token(-1, ")"));
+
+                return tokens.Count - indDiv-2;
+            }
+
+            return 0;
+        }
+
+        private static int GetDivIndex(List<Token> tokens)
+        {
+            var indDiv = -1;
+            var nextDiv = tokens.FirstOrDefault(t => t.Value == "/");
+
+            if (nextDiv != null)
+            {
+                indDiv = tokens.IndexOf(nextDiv);
+
+                while (tokens[..indDiv].Count(t => t.Value == "(") != tokens[..indDiv].Count(t => t.Value == ")"))
+                {
+                    nextDiv = tokens[indDiv..].FirstOrDefault(t => t.Value == "/");
+
+                    if (nextDiv is null)
+                        return -1; ;
+
+                    indDiv = tokens.IndexOf(nextDiv);
+                }
+            }
+
+            return indDiv;
         }
 
         private static void SimpleAssociate(List<Token> tokens, List<Token> res, int openBrakeIndex, List<Token> subExpression)
         {
+            List<Token> left, mul;
+
             switch (tokens[openBrakeIndex - 1].Value)
             {
                 case "-":
+                    var brakes = 0;
                     subExpression.ForEach(t =>
                     {
-                        switch (t.Value)
+                        if (t.Value == "(")
+                            brakes++;
+                        else if (t.Value == ")")
+                            brakes--;
+
+                        if (brakes == 0)
                         {
-                            case "-":
-                                t.Value = "+";
-                                break;
-                            case "+":
-                                t.Value = "-";
-                                break;
+                            switch (t.Value)
+                            {
+                                case "-":
+                                    t.Value = "+";
+                                    break;
+                                case "+":
+                                    t.Value = "-";
+                                    break;
+                            }
                         }
                     });
+
                     if (subExpression[0].Value == "+")
                     {
                         res.RemoveAt(res.Count - 1);
@@ -204,10 +316,16 @@ namespace ArithmeticExpressionAnalyzer
                     res.AddRange(subExpression);
                     break;
                 case "*":
-                    List<Token> left = GetLeftOperand(res[..(res.Count - 1)]);
-                    List<Token> mul = GetMul(left, subExpression);
+                    left = GetLeftOperand(res[..(res.Count - 1)]);
+                    mul = GetMul(left, subExpression);
                     res.RemoveRange(res.Count - left.Count - 1, left.Count + 1);
                     res.AddRange(mul);
+                    break;
+                case "/":
+                    left = GetLeftOperand(res[..(res.Count - 1)]);
+                    res.Add(new Token(-1, "("));
+                    res.AddRange(subExpression);
+                    res.Add(new Token(-1, ")"));
                     break;
             }
         }
@@ -240,7 +358,7 @@ namespace ArithmeticExpressionAnalyzer
                     else
                     {
 
-                        var ind = left[(i1 + 2)..].IndexOf(next);
+                        var ind = left.IndexOf(next);
 
                         while (left[i1..ind].Count(t => t.Value == "(") != left[i1..ind].Count(t => t.Value == "("))
                         {
@@ -251,10 +369,10 @@ namespace ArithmeticExpressionAnalyzer
                                 l = left[i1..];
                             }
 
-                            ind = left[(i1 + 2)..].IndexOf(next);
+                            ind = left.IndexOf(next);
                         }
 
-                        l = left[i1..(ind - 1)];
+                        l = left[i1..ind];
                         i1 = ind - 1;
                     }
                 }
@@ -281,7 +399,7 @@ namespace ArithmeticExpressionAnalyzer
                         else
                         {
 
-                            var ind = right[(i2 + 2)..].IndexOf(next);
+                            var ind = right.IndexOf(next);
 
                             while (right[i2..ind].Count(t => t.Value == "(") != right[i2..ind].Count(t => t.Value == "("))
                             {
@@ -289,13 +407,13 @@ namespace ArithmeticExpressionAnalyzer
 
                                 if (next is null)
                                 {
-                                    l = right[i2..];
+                                    r = right[i2..];
                                 }
 
-                                ind = right[(i2 + 2)..].IndexOf(next);
+                                ind = right.IndexOf(next);
                             }
 
-                            l = right[i2..(ind - 1)];
+                            r = right[i2..ind];
                             i2 = ind - 1;
                         }
                     }
@@ -308,7 +426,11 @@ namespace ArithmeticExpressionAnalyzer
                     res.AddRange(l);
                     res.Add(new Token(-1, "*"));
                     res.AddRange(r);
+
+                    rightMark = null;
                 }
+
+                leftMark = null;
             }
 
             return res;
@@ -319,7 +441,7 @@ namespace ArithmeticExpressionAnalyzer
             return leftMark == null && rightMark == null ? null :
                 leftMark == null ? rightMark :
                 rightMark == null ? leftMark :
-                leftMark.Value == rightMark.Value ? leftMark : new Token(-1, "-");
+                leftMark.Value == rightMark.Value ? new Token(-1, "+") : new Token(-1, "-");
         }
 
         private static List<Token> GetLeftOperand(List<Token> left)
