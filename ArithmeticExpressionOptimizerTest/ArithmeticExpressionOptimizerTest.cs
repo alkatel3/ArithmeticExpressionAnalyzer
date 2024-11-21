@@ -243,7 +243,10 @@ namespace ArithmeticExpressionOptimizerTest
         [DataRow("(a/b)/(c+d)/(e*f*g)", "(a/b)/(c*e*f*g+d*e*f*g)")]
         [DataRow("(a+b)/(c-d)/(e-f)/(g+h)", "(a+b)/(c*e*g+c*e*h-c*f*g-c*f*h-d*e*g-d*e*h+d*f*g+d*f*h)")]
         [DataRow("a/(b*c*d)/(e-f+g)", "a/(b*c*d*e-b*c*d*f+b*c*d*g)")]
-
+        [DataRow("a/(b*c*d)/sin(e-f+g)", "a/(b*c*d*sin(e-f+g))")]
+        [DataRow("a/(b*c+d)/func(e-f+g)", "a/(b*c*func(e-f+g)+d*func(e-f+g))")]
+        [DataRow("a/sin(b*c+d)/func(e-f+g)", "a/(sin(b*c+d)*func(e-f+g))")]
+        [DataRow("a/(b*d)/c", "a/(b*d*c)")]
 
         [DataRow("a+(b-(c+d-e))", "a+b-c-d+e")]
         [DataRow("(a-b)*(c+(d-e))", "a*c+a*d-a*e-b*c-b*d+b*e")]

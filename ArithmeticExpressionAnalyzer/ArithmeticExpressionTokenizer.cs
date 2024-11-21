@@ -22,7 +22,7 @@ namespace ArithmeticExpressionAnalyzer
 
         public ArithmeticExpressionTokenizer()
         {
-            Funstions = [ "sin", "cos", "tg" ];
+            Funstions = [ "sin", "cos", "tg", "func" ];
             Operations = [ "+", "-", "*", "/"];
             FloatDigins = @"\d+\.\d+";
             Digins = @"\d+";

@@ -54,11 +54,22 @@ namespace ArithmeticExpressionAnalyzer
                 {
                     if (openBrakeIndex - 1 < tokens.Count && (openBrakeIndex - 1) >= 0 && ArithmeticExpressionTokenizer.IsFunction(tokens[openBrakeIndex - 1].Value))
                     {
-                        res.AddRange(tokens[(openBrakeIndex)..(closeBrakeIndex+1)]);
-                        continue;
-                    }
+                        openBrakeIndex -= 1;
+                        closeBrakeIndex++;
+                        res.RemoveAt(res.Count - 1);
 
-                    subExpression = subExpressionProcess(tokens[(openBrakeIndex + 1)..closeBrakeIndex]);
+                        subExpression = new List<Token>();
+                        subExpression.AddRange(tokens[openBrakeIndex..(openBrakeIndex + 2)]);
+                        subExpression.AddRange(subExpressionProcess(tokens[(openBrakeIndex +2)..(closeBrakeIndex - 1)]));
+                        subExpression.AddRange(tokens[(closeBrakeIndex-1)..(closeBrakeIndex)]);
+                        //res.AddRange(tokens[(openBrakeIndex-1)..(closeBrakeIndex + 1)]);
+                        //brakesPairs = 0;
+                        //continue;
+                    }
+                    else
+                    {
+                        subExpression = subExpressionProcess(tokens[(openBrakeIndex + 1)..closeBrakeIndex]);
+                    }
 
                     if (openBrakeIndex != 0)
                     {
@@ -226,7 +237,7 @@ namespace ArithmeticExpressionAnalyzer
                     }
                     return right.Count + 3;
                 case "/":
-                    var temp = GetRightOperand(tokens[openBrakeIndex..], true);
+                    var temp = GetRightOperand(tokens[(closeBrakeIndex+2)..], true);
                     right = temp.Item1;
                     if (right.Count > 1 && (!right.Any(t => t.Value == "(") || GetFirstOperationIndex(right, "*") == -1))
                     {
@@ -237,7 +248,7 @@ namespace ArithmeticExpressionAnalyzer
                     else
                         res.AddRange(right);
 
-                    return temp.Item2;
+            return temp.Item2;
             }
             return 0;
         }
@@ -437,6 +448,7 @@ namespace ArithmeticExpressionAnalyzer
         private static List<Token> GetMul(List<Token> left, List<Token> right)
         {
             Token mark = null;
+            List<Token> l = null;
 
             var indDivLeft = GetFirstOperationIndex(left, "/");
             List<Token> tempLeft = new List<Token>();
@@ -489,7 +501,27 @@ namespace ArithmeticExpressionAnalyzer
                     i1++;
                 }
 
-                List<Token> l = left[i1..(i1 + 1)];
+                if (ArithmeticExpressionTokenizer.IsFunction(left[i1].Value))
+                {
+                    var tempAdd = GetFirstOperationIndex(left[i1..], "+");
+                    var tempSub = GetFirstOperationIndex(left[i1..], "-");
+                    var next = Math.Min(tempAdd, tempSub);
+                    if (next != -1)
+                    {
+                        l = left[i1..(next)];
+                        i1 = next - 1;
+                    }
+                    else
+                    {
+                        l = left[i1..];
+                        i1 = left.Count - 1;
+                    }
+                }
+                else
+                {
+                    l = left[i1..(i1 + 1)];
+                }
+
                 if (i1 + 1 < left.Count && (left[i1 + 1].Value == "*" || left[i1 + 1].Value == "/"))
                 {
                     var next = left[(i1 + 2)..].FirstOrDefault(t => t.Value == "+" || t.Value == "-");
@@ -530,7 +562,26 @@ namespace ArithmeticExpressionAnalyzer
                         i2++;
                     }
 
-                    r = right[i2..(i2 + 1)];
+                    if (ArithmeticExpressionTokenizer.IsFunction(right[i2].Value))
+                    {
+                        var tempAdd = GetFirstOperationIndex(right[i2..], "+");
+                        var tempSub = GetFirstOperationIndex(right[i2..], "-");
+                        var next = Math.Min(tempAdd, tempSub);
+                        if (next != -1)
+                        {
+                            r = right[i2..(next)];
+                            i2 = next-1;
+                        }
+                        else
+                        {
+                            r = right[i2..];
+                            i2 = right.Count-1;
+                        }
+                    }
+                    else
+                    {
+                        r = right[i2..(i2 + 1)];
+                    }
 
                     if (i2 + 1 < right.Count && (right[i2 + 1].Value == "*" || right[i2 + 1].Value == "/"))
                     {
@@ -668,6 +719,3 @@ namespace ArithmeticExpressionAnalyzer
         }
     }
 }
-
-//20/5*(3+1)=1
-//20/5*
