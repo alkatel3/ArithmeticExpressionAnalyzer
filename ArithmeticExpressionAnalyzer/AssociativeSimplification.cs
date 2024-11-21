@@ -118,7 +118,7 @@ namespace ArithmeticExpressionAnalyzer
                         mul.AddRange(subExpression);
 
                     mul.Add(new Token(-1, "/"));
-                    if (right.Count > 1)
+                    if (right.Count > 1 && (!right.Any(t=>t.Value=="(") || GetFirstOperationIndex(right, "*") == -1))
                     {
                         mul.Add(new Token(-1, "("));
                         mul.AddRange(right);
@@ -178,17 +178,36 @@ namespace ArithmeticExpressionAnalyzer
                     left = GetLeftOperand(res[..(res.Count - 1)]);
                     mul = GetMul(left, subExpression);
                     right = GetRightOperand(tokens[(closeBrakeIndex + 2)..]).Item1;
-                    mul = GetMul(mul, right);
-                    res.RemoveRange(res.Count - left.Count - 1, left.Count + 1);
-                    res.AddRange(mul);
-                    return right.Count + 2;
+                    if (tokens[closeBrakeIndex + 1].Value == "*")
+                    {
+                        mul = GetMul(mul, right);
+                        res.RemoveRange(res.Count - left.Count - 1, left.Count + 1);
+                        res.AddRange(mul);
+                    }
+                    else if(tokens[closeBrakeIndex + 1].Value == "/")
+                    {
+                        res.RemoveRange(res.Count - left.Count - 1, left.Count + 1);
+                        res.Add(new Token(-1, "("));
+                        res.AddRange(mul);
+                        res.Add(new Token(-1, ")"));
+                        res.Add(tokens[closeBrakeIndex + 1]);
+                        res.Add(new Token(-1, "("));
+                        res.AddRange(right);
+                        res.Add(new Token(-1, ")"));
+                    }
+                    return right.Count + 3;
                 case "/":
-                    //left = GetLeftOperand(res[..(res.Count - 1)]);
                     var temp = GetRightOperand(tokens[openBrakeIndex..], true);
                     right = temp.Item1;
-                    res.Add(new Token(-1, "("));
-                    res.AddRange(right);
-                    res.Add(new Token(-1, ")"));
+                    if (right.Count > 1 && (!right.Any(t => t.Value == "(") || GetFirstOperationIndex(right, "*") == -1))
+                    {
+                        res.Add(new Token(-1, "("));
+                        res.AddRange(right);
+                        res.Add(new Token(-1, ")"));
+                    }
+                    else
+                        res.AddRange(right);
+
                     return temp.Item2;
             }
             return 0;
@@ -216,7 +235,28 @@ namespace ArithmeticExpressionAnalyzer
                 if (next is null)
                 {
                     if (isDiv)
+                    {
                         bias = ReplaseDivToMul(tokens);
+                        if(bias !=0 && bias != tokens.Count)
+                        {
+                            var DivRes = new List<Token>();
+                            DivRes.Add(new Token(-1,"("));
+                            DivRes.AddRange(subExpressionProcess(tokens[..bias]));
+                            DivRes.Add(new Token(-1, ")"));
+                            DivRes.Add(tokens[bias]);
+                            if (tokens[(bias + 1)..].Count > 1)
+                            {
+                                DivRes.Add(new Token(-1, "("));
+                                DivRes.AddRange(subExpressionProcess(tokens[(bias + 1)..]));
+                                DivRes.Add(new Token(-1, ")"));
+                            }
+                            else
+                            {
+                                DivRes.AddRange(subExpressionProcess(tokens[(bias + 1)..]));
+                            }
+                            return (DivRes, tokens.Count);
+                        }
+                    }
 
                     return (subExpressionProcess(tokens), bias);
                 }
@@ -232,29 +272,41 @@ namespace ArithmeticExpressionAnalyzer
 
         private static int ReplaseDivToMul(List<Token> tokens)
         {
-            var indDiv = GetDivIndex(tokens);
-            if (indDiv != -1)
+            var indDiv = GetFirstDivOrMulIndex(tokens);
+
+            if (indDiv == -1)
+                return 0;
+
+            while (indDiv != -1)
             {
-                var indLeftDiv = GetDivIndex(tokens[..indDiv]);
+                if (tokens[indDiv].Value == "*")
+                    break;
+
                 tokens[indDiv].Value = "*";
-
-                if (indLeftDiv == -1)
-                    tokens.Insert(0, new Token(-1, "("));
+                var temp = GetFirstDivOrMulIndex(tokens[(indDiv + 1)..]);
+                if (temp == -1)
+                {
+                    indDiv = tokens.Count;
+                    break;
+                }
                 else
-                    tokens.Insert(indLeftDiv + 1, new Token(-1, "("));
-
-                tokens.Add(new Token(-1, ")"));
-
-                return tokens.Count - indDiv-2;
+                    indDiv += temp + 1;
             }
 
-            return 0;
+            //tokens.Insert(0, new Token(-1, "("));
+
+            //if (indDiv != -1)
+            //    tokens.Insert(indDiv, new Token(-1, ")"));
+            //else
+            //    tokens.Add(new Token(-1, ")"));
+
+            return indDiv;
         }
 
-        private static int GetDivIndex(List<Token> tokens)
+        private static int GetFirstDivOrMulIndex(List<Token> tokens)
         {
             var indDiv = -1;
-            var nextDiv = tokens.FirstOrDefault(t => t.Value == "/");
+            var nextDiv = tokens.FirstOrDefault(t => t.Value == "/" || t.Value == "*");
 
             if (nextDiv != null)
             {
@@ -262,10 +314,33 @@ namespace ArithmeticExpressionAnalyzer
 
                 while (tokens[..indDiv].Count(t => t.Value == "(") != tokens[..indDiv].Count(t => t.Value == ")"))
                 {
-                    nextDiv = tokens[indDiv..].FirstOrDefault(t => t.Value == "/");
+                    nextDiv = tokens[(indDiv + 1)..].FirstOrDefault(t => t.Value == "/");
 
                     if (nextDiv is null)
-                        return -1; ;
+                        return -1;
+
+                    indDiv = tokens.IndexOf(nextDiv);
+                }
+            }
+
+            return indDiv;
+        }
+
+        private static int GetFirstOperationIndex(List<Token> tokens, string operation)
+        {
+            var indDiv = -1;
+            var nextDiv = tokens.FirstOrDefault(t => t.Value == operation);
+
+            if (nextDiv != null)
+            {
+                indDiv = tokens.IndexOf(nextDiv);
+
+                while (tokens[..indDiv].Count(t => t.Value == "(") != tokens[..indDiv].Count(t => t.Value == ")"))
+                {
+                    nextDiv = tokens[(indDiv + 1)..].FirstOrDefault(t => t.Value == operation);
+
+                    if (nextDiv is null)
+                        return -1;
 
                     indDiv = tokens.IndexOf(nextDiv);
                 }
@@ -332,11 +407,51 @@ namespace ArithmeticExpressionAnalyzer
 
         private static List<Token> GetMul(List<Token> left, List<Token> right)
         {
+            Token mark = null;
+
+            var indDivLeft = GetFirstOperationIndex(left, "/");
+            List<Token> tempLeft = new List<Token>();
+            if (indDivLeft != -1 &&
+                GetFirstOperationIndex(left, "-") == -1 &&
+                GetFirstOperationIndex(left, "+") == -1)
+            {
+                if (left[0].Value != "(")
+                {
+                    left.Insert(0, new Token(-1, "("));
+                    indDivLeft++;
+                    left.Insert(indDivLeft, new Token(-1, ")"));
+                    indDivLeft++;
+                }
+
+                tempLeft = left;
+                left = left[1..(indDivLeft - 1)];
+            }
+
+            var indDivRight = GetFirstOperationIndex(right, "/");
+            List<Token> tempRight = new List<Token>();
+            if (indDivRight != -1 &&
+                GetFirstOperationIndex(right, "-") == -1 &&
+                GetFirstOperationIndex(right, "+") == -1)
+            {
+                
+
+                if (right[0].Value != "(")
+                {
+                    right.Insert(0, new Token(-1, "("));
+                    indDivRight++;
+                    right.Insert(indDivRight, new Token(-1, ")"));
+                    indDivRight++;
+                }
+
+                tempRight = right;
+                right = right[1..(indDivRight-1)];
+            }
+
             var res = new List<Token>();
             Token leftMark = null;
             Token rightMark = null;
 
-            for(int i1 = 0; i1 < left.Count; i1++)
+            for (int i1 = 0; i1 < left.Count; i1++)
             {
                 List<Token> r = null;
                 if (ArithmeticExpressionTokenizer.IsOperator(left[i1].Value))
@@ -345,7 +460,7 @@ namespace ArithmeticExpressionAnalyzer
                     i1++;
                 }
 
-                List<Token> l = left[i1..(i1+1)];
+                List<Token> l = left[i1..(i1 + 1)];
                 if (i1 + 1 < left.Count && (left[i1 + 1].Value == "*" || left[i1 + 1].Value == "/"))
                 {
                     var next = left[(i1 + 2)..].FirstOrDefault(t => t.Value == "+" || t.Value == "-");
@@ -360,16 +475,17 @@ namespace ArithmeticExpressionAnalyzer
 
                         var ind = left.IndexOf(next);
 
-                        while (left[i1..ind].Count(t => t.Value == "(") != left[i1..ind].Count(t => t.Value == "("))
+                        while (left[i1..ind].Count(t => t.Value == "(") != left[i1..ind].Count(t => t.Value == ")"))
                         {
-                            next = left[(i1 + 2)..].FirstOrDefault(t => t.Value == "+" || t.Value == "-");
+                            next = left[(ind + 2)..].FirstOrDefault(t => t.Value == "+" || t.Value == "-");
 
                             if (next is null)
                             {
                                 l = left[i1..];
+                                break;
                             }
 
-                            ind = left.IndexOf(next);
+                            ind += left[(ind + 1)..].IndexOf(next) + 1;
                         }
 
                         l = left[i1..ind];
@@ -377,7 +493,7 @@ namespace ArithmeticExpressionAnalyzer
                     }
                 }
 
-                for(int i2 = 0;i2 < right.Count; i2++)
+                for (int i2 = 0; i2 < right.Count; i2++)
                 {
                     if (ArithmeticExpressionTokenizer.IsOperator(right[i2].Value))
                     {
@@ -385,7 +501,7 @@ namespace ArithmeticExpressionAnalyzer
                         i2++;
                     }
 
-                    r = right[i2..(i2+1)];
+                    r = right[i2..(i2 + 1)];
 
                     if (i2 + 1 < right.Count && (right[i2 + 1].Value == "*" || right[i2 + 1].Value == "/"))
                     {
@@ -401,24 +517,31 @@ namespace ArithmeticExpressionAnalyzer
 
                             var ind = right.IndexOf(next);
 
-                            while (right[i2..ind].Count(t => t.Value == "(") != right[i2..ind].Count(t => t.Value == "("))
+                            while (right[i2..ind].Count(t => t.Value == "(") != right[i2..ind].Count(t => t.Value == ")"))
                             {
-                                next = right[(i2 + 2)..].FirstOrDefault(t => t.Value == "+" || t.Value == "-");
+                                next = right[(ind + 2)..].FirstOrDefault(t => t.Value == "+" || t.Value == "-");
 
                                 if (next is null)
                                 {
-                                    r = right[i2..];
+                                    ind = right.Count();
+                                    break;
                                 }
 
-                                ind = right.IndexOf(next);
+                                ind += right[(ind + 1)..].IndexOf(next) + 1;
                             }
 
                             r = right[i2..ind];
+                            mark = GetMulMark(leftMark, rightMark);
+                            if (mark is not null)
+                                res.Add(mark);
+
+                            res.AddRange(GetMul(l, r));
                             i2 = ind - 1;
+                            continue;
                         }
                     }
 
-                    Token mark = GetMulMark(leftMark, rightMark);
+                    mark = GetMulMark(leftMark, rightMark);
 
                     if (mark is not null)
                         res.Add(mark);
@@ -431,8 +554,53 @@ namespace ArithmeticExpressionAnalyzer
                 }
 
                 leftMark = null;
-            }
 
+            }
+                if (tempLeft.Any() && !tempRight.Any())
+                {
+                    if (GetFirstOperationIndex(res, "-") != -1 ||
+                        GetFirstOperationIndex(res, "+") != -1)
+                    {
+                        res.Insert(0, new Token(-1, "("));
+                        res.Add(new Token(-1, ")"));
+                    }
+                    res.Add(new Token(-1, "/"));
+                    res.AddRange(tempLeft[(indDivLeft + 1)..]);
+                }
+                else if (!tempLeft.Any() && tempRight.Any())
+                {
+                    if (GetFirstOperationIndex(res, "-") != -1 ||
+                        GetFirstOperationIndex(res, "+") != -1)
+                    {
+                        res.Insert(0, new Token(-1, "("));
+                        res.Add(new Token(-1, ")"));
+                    }
+                    res.Add(new Token(-1, "/"));
+                    res.AddRange(tempRight[(indDivRight + 1)..]);
+                }
+                else if (tempLeft.Any() && tempRight.Any())
+                {
+                    if (GetFirstOperationIndex(res, "-") != -1 ||
+                        GetFirstOperationIndex(res, "+") != -1)
+                    {
+                        res.Insert(0, new Token(-1, "("));
+                        res.Add(new Token(-1, ")"));
+                    }
+                    res.Add(new Token(-1, "/"));
+                    var denominator = GetMul(tempLeft[(indDivLeft + 1)..1], tempRight[(indDivRight + 1)..1]);
+                    if (GetFirstOperationIndex(denominator, "-") != -1 ||
+                        GetFirstOperationIndex(denominator, "+") != -1)
+                    {
+                        res.Add(new Token(-1, "("));
+                        res.AddRange(denominator);
+                        res.Add(new Token(-1, ")"));
+                    }
+                    else
+                    {
+                        res.AddRange(denominator);
+                    }
+                }
+            
             return res;
         }
 
