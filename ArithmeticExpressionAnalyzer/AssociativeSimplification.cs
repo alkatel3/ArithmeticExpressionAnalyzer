@@ -164,11 +164,40 @@ namespace ArithmeticExpressionAnalyzer
                         if (!res.Any() || res[res.Count() - 1].Value == "(")
                             subExpression.RemoveAt(0);
                     }
+                    else
+                    {
+                        subExpression.Insert(0, new Token(-1, "-"));
+                    }
+
+                    res.RemoveAt(res.Count - 1);
 
                     right = GetRightOperand(tokens[(closeBrakeIndex + 2)..]).Item1;
-                    mul = GetMul(subExpression, right);
-                    res.AddRange(mul);
-                    return right.Count+1;
+                    //mul = GetMul(subExpression, right);
+                    //if (mul[0].Value != "-")
+                    //    res.Add(new Token(-1, "+"));
+
+                    if (tokens[closeBrakeIndex + 1].Value == "*")
+                    {
+                        mul = GetMul(subExpression, right);
+
+                        if (mul[0].Value != "-")
+                            res.Add(new Token(-1, "+"));
+                        //res.RemoveRange(res.Count - subExpression.Count - 1, subExpression.Count + 1);
+                        res.AddRange(mul);
+                    }
+                    else if (tokens[closeBrakeIndex + 1].Value == "/")
+                    {
+                        res.Add(new Token(-1, "+"));
+                        res.Add(new Token(-1, "("));
+                        res.AddRange(subExpression);
+                        res.Add(new Token(-1, ")"));
+                        res.Add(tokens[closeBrakeIndex + 1]);
+                        res.Add(new Token(-1, "("));
+                        res.AddRange(right);
+                        res.Add(new Token(-1, ")"));
+                    }
+                    //res.AddRange(mul);
+                    return right.Count+3;
                 case "+":
                     right = GetRightOperand(tokens[(closeBrakeIndex+2)..]).Item1;
                     mul = GetMul(subExpression, right);
