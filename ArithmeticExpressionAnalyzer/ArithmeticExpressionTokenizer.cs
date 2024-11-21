@@ -68,7 +68,7 @@ namespace ArithmeticExpressionAnalyzer
 
         public static bool IsNumber(string token)
         {
-            return Regex.IsMatch(token, $@"{FloatDigins}|{Digins}");
+            return Regex.IsMatch(token, $@"^({FloatDigins}|{Digins})$");
         }
 
         public static bool IsVariable(string token)
