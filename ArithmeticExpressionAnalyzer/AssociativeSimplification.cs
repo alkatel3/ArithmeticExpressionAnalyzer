@@ -616,7 +616,7 @@ namespace ArithmeticExpressionAnalyzer
                         res.Add(new Token(-1, ")"));
                     }
                     res.Add(new Token(-1, "/"));
-                    var denominator = GetMul(tempLeft[(indDivLeft + 1)..1], tempRight[(indDivRight + 1)..1]);
+                    var denominator = GetMul(tempLeft[(indDivLeft+2)..^1], tempRight[(indDivRight+2)..^1]);
                     if (GetFirstOperationIndex(denominator, "-") != -1 ||
                         GetFirstOperationIndex(denominator, "+") != -1)
                     {

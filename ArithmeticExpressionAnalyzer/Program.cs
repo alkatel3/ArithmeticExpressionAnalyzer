@@ -45,9 +45,12 @@ namespace ArithmeticExpressionAnalyzer
                 displayOptimising();
                 Console.WriteLine();
                 //Expression Build Tree
-                var tree = new ArithmeticTree();
-                tree.BuildTree(optimizedExpression);
-                tree.DisplayTree();
+                //var tree = new ArithmeticTree();
+                //tree.BuildTree(optimizedExpression);
+                //tree.DisplayTree();
+                Console.WriteLine($"Застосування асоціативного закону");
+                var associativeSimplificationExpression = AssociativeSimplification.Execute(optimizedExpression);
+                Console.WriteLine(String.Join("", associativeSimplificationExpression.Select(t => t.Value)));
                 Console.ReadKey();
                 Console.Clear();
             }
