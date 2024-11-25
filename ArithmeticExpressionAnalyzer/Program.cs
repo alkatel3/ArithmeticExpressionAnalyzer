@@ -29,27 +29,29 @@ namespace ArithmeticExpressionAnalyzer
 
                 Console.WriteLine($"Вираз правильний");
                 //Optimize Expression
-                var optimizedExpression = ArithmeticExpressionOptimizer.Optimize(tokens);
-                displayTokens(optimizedExpression);
+                //var optimizedExpression = ArithmeticExpressionOptimizer.Optimize(tokens);
+                //displayTokens(optimizedExpression);
 
-                ValidationRes = ArithmeticExpressionValidator.Validate(optimizedExpression);
-                if (ValidationRes != null && ValidationRes.Count() > 0)
-                {
-                    Console.WriteLine();
-                    Console.WriteLine("Оптимізований вираз містить помилки");
-                    Console.ReadKey();
-                    Console.Clear();
-                    continue;
-                }
+                //ValidationRes = ArithmeticExpressionValidator.Validate(optimizedExpression);
+                //if (ValidationRes != null && ValidationRes.Count() > 0)
+                //{
+                //    Console.WriteLine();
+                //    Console.WriteLine("Оптимізований вираз містить помилки");
+                //    Console.ReadKey();
+                //    Console.Clear();
+                //    continue;
+                //}
 
-                displayOptimising();
-                Console.WriteLine();
+                //displayOptimising();
+                //Console.WriteLine();
+
+
                 //Expression Build Tree
                 //var tree = new ArithmeticTree();
                 //tree.BuildTree(optimizedExpression);
                 //tree.DisplayTree();
                 Console.WriteLine($"Застосування асоціативного закону");
-                var associativeSimplificationExpression = AssociativeSimplification.Execute(optimizedExpression);
+                var associativeSimplificationExpression = DistributivitySimplification.Execute(tokens);
                 Console.WriteLine(String.Join("", associativeSimplificationExpression.Select(t => t.Value)));
                 Console.ReadKey();
                 Console.Clear();
