@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace ArithmeticExpressionAnalyzer
@@ -18,8 +19,25 @@ namespace ArithmeticExpressionAnalyzer
             var res = new List<Token>();
             var terms = SplitIntoTerms(expression);
             terms = ReplaceDivisionWithMultiplication(terms);
-            //res = GroupAndFactorize(terms);
+            res = GroupAndFactorize(terms);
+            res = ReplaceMultiplicationWithDivision(res);
             return res;
+        }
+
+        private static List<Token> ReplaceMultiplicationWithDivision(List<Token> tokens)
+        {
+            var reg = new Regex(@"^1/.*$");
+
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                if (reg.IsMatch(tokens[i].Value) && i > 0 && tokens[i-1].Value == "*")
+                {
+                    tokens[i].Value = tokens[i].Value[2..];
+                    tokens[i-1].Value = "/";
+                }
+            }
+
+            return tokens;
         }
 
         private static List<List<Token>> SplitIntoTerms(List<Token> tokens)
@@ -40,6 +58,9 @@ namespace ArithmeticExpressionAnalyzer
                 {
                     if (currentTerm.Count > 0)
                     {
+                        if (token.Value == "-")
+                            currentTerm.Insert(0, new Token("-1"));
+
                         terms.Add(currentTerm);
                         currentTerm = new List<Token>();
                     }
@@ -121,42 +142,9 @@ namespace ArithmeticExpressionAnalyzer
 
         private static List<Token> GroupAndFactorize(List<List<Token>> terms)
         {
-            // Знаходимо лексеми, які зустрічаються найчастіше
-            var commonFactors = FindCommonFactors(terms);
+            var res = new List<Token>();
 
-            if (commonFactors.Count == 0)
-            {
-                // Якщо немає спільних множників, повертаємо оригінальний список
-                return Flatten(terms);
-            }
-
-            // Виносимо спільний множник за дужки
-            var result = new List<Token>();
-            result.AddRange(commonFactors);
-            result.Add(new Token("*"));
-            result.Add(new Token("("));
-
-            foreach (var term in terms)
-            {
-                var remaining = RemoveFactors(term, commonFactors);
-                result.AddRange(remaining);
-                result.Add(new Token("+"));
-            }
-
-            // Видалити останній зайвий "+"
-            if (result[^1].Value == "+")
-            {
-                result.RemoveAt(result.Count - 1);
-            }
-
-            result.Add(new Token(")"));
-
-            return result;
-        }
-
-        private static List<Token> FindCommonFactors(List<List<Token>> terms)
-        {
-            var factorCounts = new Dictionary<string, int>();
+            var factorCounts = new Dictionary<string, List<List<Token>>>();
             var operations = new List<string>() { "*", "/", "-", "+", };
 
             foreach (var term in terms)
@@ -167,73 +155,131 @@ namespace ArithmeticExpressionAnalyzer
                 {
                     if (factorCounts.ContainsKey(factor))
                     {
-                        factorCounts[factor]++;
+                        factorCounts[factor].Add(term);
                     }
                     else
                     {
-                        factorCounts[factor] = 1;
+                        factorCounts[factor] = new List<List<Token>>();
+                        factorCounts[factor].Add(term);
                     }
                 }
             }
 
-            return factorCounts
-                .Where(kv => kv.Value == terms.Count)
-                .Select(kv => new Token(kv.Key))
-                .ToList();
-        }
+            var maxMultiple = factorCounts.Max(f => f.Value.Count);
+            var groupToSimplify = factorCounts
+                .Where(kv => kv.Value.Count == maxMultiple && kv.Value.Count>1).FirstOrDefault().Key;
 
-        private static List<Token> RemoveFactors(List<Token> term, List<Token> commonFactors)
-        {
-            var remaining = new List<Token>(term);
-
-            foreach (var factor in commonFactors)
+            if(groupToSimplify is null)
             {
-                remaining.RemoveAll(t => t.Value == factor.Value);
-            }
-
-            return remaining;
-        }
-
-        private static List<Token> Flatten(List<List<Token>> terms)
-        {
-            var result = new List<Token>();
-
-            foreach (var term in terms)
-            {
-                result.AddRange(term);
-                result.Add(new Token("+"));
-            }
-
-            // Видалити останній зайвий "+"
-            if (result[^1].Value == "+")
-            {
-                result.RemoveAt(result.Count - 1);
-            }
-
-            return result;
-        }
-
-        private static int GetFirstOperationIndex(List<Token> tokens, string[] operation)
-        {
-            var indDiv = -1;
-            var nextDiv = tokens.FirstOrDefault(t => operation.Contains(t.Value));
-
-            if (nextDiv != null)
-            {
-                indDiv = tokens.IndexOf(nextDiv);
-
-                while (tokens[..indDiv].Count(t => t.Value == "(") != tokens[..indDiv].Count(t => t.Value == ")"))
+                for(int i = 0; i<terms.Count; i++)
                 {
-                    nextDiv = tokens[(indDiv + 1)..].FirstOrDefault(t => operation.Contains(t.Value));
+                    res.AddRange(terms[i]);
 
-                    if (nextDiv is null)
-                        return -1;
+                    if (i != terms.Count - 1)
+                    {
+                        res.Add(new Token("+"));
+                    }
+                }
 
-                    indDiv = tokens.IndexOf(nextDiv);
+                return res;
+            }
+
+            var commonFactors = new List<string>();
+            foreach(var item in factorCounts[groupToSimplify])
+            {
+                var multiples = item.Where(t => !operations.Contains(t.Value)).Select(t => t.Value).ToList();
+                if (commonFactors.Count == 0)
+                {
+                    commonFactors = multiples;
+                }
+                else
+                {
+                    commonFactors = commonFactors.Intersect(multiples).ToList();
                 }
             }
 
-            return indDiv;
+            var group = terms.Where(t => factorCounts[groupToSimplify].Contains(t)).ToList();
+            var resGroup = RemoveFaktors(group, commonFactors);
+
+            if(commonFactors.Count > 0)
+            {
+                for(var i = 0;i<commonFactors.Count; i+=2)
+                {
+                    if (i == commonFactors.Count - 1)
+                        break;
+
+                    commonFactors.Insert(i + 1, "*");
+                }
+            }
+            res.AddRange(commonFactors.Select(f => new Token(f)));
+            if (resGroup.Count > 1)
+            {
+                res.Add(new Token("*"));
+                res.Add(new Token("("));
+                res.AddRange(GroupAndFactorize(resGroup));
+                res.Add(new Token(")"));
+            }
+            else
+            {
+                res.Insert(0, new Token("*"));
+                res.Insert(0, resGroup[0][0]);
+            }
+
+            terms.RemoveAll(t => factorCounts[groupToSimplify].Contains(t));
+            if (terms.Count > 0)
+            {
+                res.Add(new Token("+"));
+                res.AddRange(GroupAndFactorize(terms));
+            }
+            return res;
+        }
+
+        private static List<List<Token>> RemoveFaktors(List<List<Token>> group, List<string> commonFactors)
+        {
+            var numberIndex = -1;
+            var number = 0.0;
+            foreach(var commonFactor in commonFactors)
+            {
+                for(var i = 0; i < group.Count(); i++)
+                {
+                    if (group[i].Count == 1)
+                    {
+                        if (number != 0)
+                        {
+                            number++;
+                            group.RemoveAt(i);
+                            group[numberIndex][0].Value = number.ToString();
+                            i--;
+                        }
+                        else
+                        {
+                            numberIndex = i;
+                            number = 1;
+                            group[i][0].Value = number.ToString();
+                        }
+
+                        continue;
+                    }
+
+                    var temp = group[i].FirstOrDefault(f => f.Value == commonFactor);
+                    var index = group[i].IndexOf(temp);
+
+                    if(index == 0)
+                        group[i].RemoveRange(0, 2);
+                    else
+                        group[i].RemoveRange(index-1, 2);
+
+                    if (group[i].Count == 1 && ArithmeticExpressionTokenizer.IsNumber(group[i][0].Value) && number != 0)
+                    {
+                        number += Double.Parse(group[i][0].Value);
+                        group.RemoveAt(i);
+                        group[numberIndex][0].Value = number.ToString();
+                        i--;
+                    }
+                }
+            }
+
+            return group;
         }
     }
 }

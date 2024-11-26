@@ -294,6 +294,10 @@ namespace ArithmeticExpressionOptimizerTest
         [DataRow("a*b+a*c", "a*(b+c)")]
         [DataRow("a/b+a/c", "a*(1/b+1/c)")]
         [DataRow("a/sin(b)+a/c", "a*(1/sin(b)+1/c)")]
+        [DataRow("a/sin(b)+a/sin(b)", "2*a/sin(b)")]
+        [DataRow("v/b+v/c+v/a", "v*(1/b+1/c+1/a)")]
+        [DataRow("v/a+v/c+v/a+1", "v*(2/a+1/c)+1")]
+        [DataRow("v/a+v/c+v/a*d+1", "v*(1/a*(1+d)+1/c)+1")]
         public void AssociativeSimplificationTest(string exp, string expectedResult)
         {
             //Arrange

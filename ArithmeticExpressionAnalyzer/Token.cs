@@ -16,6 +16,9 @@ namespace ArithmeticExpressionAnalyzer
             Index = index;
             Value = value;
         }
-        public Token(string value) => new Token(-1, value);
+        public Token(string value): this(-1, value)
+        {
+
+        }
     }
 }
