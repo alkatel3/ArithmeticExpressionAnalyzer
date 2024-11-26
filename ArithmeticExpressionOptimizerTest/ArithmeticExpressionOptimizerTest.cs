@@ -316,10 +316,15 @@ namespace ArithmeticExpressionOptimizerTest
         [DataRow("a/sin(b)+a/c+a/sin(b)", "a*(2/sin(b)+1/c)")]
         [DataRow("x*(y+z)+x*(y+z)", "2*x*(y+z)")]
         [DataRow("x*(y+z)+x*(z+y)", "2*x*(y+z)")]
+        [DataRow("x*(y*a+z*a)+x*(z*a+y*a)", "2*x*(a*(y+z))")]
         [DataRow("p*q+p*r+p*q", "p*(2*q+r)")]
         [DataRow("a*b*c+a*b*d", "a*b*(c+d)")]
         [DataRow("a/b+c/a+c/a", "2*c/a+a/b")]
         [DataRow("a/b+f*u+c/b+f*g", "1/b*(a+c)+f*(u+g)")]
+        [DataRow("x*sin(y+z)+x*sin(y+z)", "2*x*sin(y+z)")]
+        [DataRow("x*sin(y-z)+x*sin(y-z)", "2*x*sin(-z+y)")]
+        [DataRow("a*b-a*c", "a*(-c+b)")]
+        [DataRow("-x/y-x/z-x/w", "-x*(1/y+1/z+1/w)")]
 
         public void AssociativeSimplificationTest(string exp, string expectedResult)
         {

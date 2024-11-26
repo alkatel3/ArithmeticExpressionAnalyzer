@@ -19,28 +19,58 @@ namespace ArithmeticExpressionAnalyzer
             var res = new List<Token>();
             var terms = SplitIntoTerms(expression);
             terms = ReplaceDivisionWithMultiplication(terms);
+            terms = ProcessDifficultMultiple(terms);
+            terms = terms.OrderBy(t => t.FirstOrDefault().Value).ToList();
             res = GroupAndFactorize(terms);
             res = ReplaceMultiplicationWithDivision(res);
             return res;
         }
 
-        private static List<Token> ReplaceMultiplicationWithDivision(List<Token> tokens)
+        private static List<List<Token>> ProcessDifficultMultiple(List<List<Token>> terms)
         {
-            var reg = new Regex(@"^1/.*$");
-
-            for (int i = 0; i < tokens.Count; i++)
+            for (int i = 0; i < terms.Count; i++)
             {
-                if (reg.IsMatch(tokens[i].Value) && i > 0 && tokens[i-1].Value == "*")
+                var multiples = SplitIntoMultiples(terms[i]);
+                terms[i] = new();
+                for (var j = 0; j < multiples.Count; j++)
                 {
-                    tokens[i].Value = tokens[i].Value[2..];
-                    tokens[i-1].Value = "/";
+                    if (multiples[j].Count > 1 && multiples[j][0].Value !="-1")
+                    {
+                        if (ArithmeticExpressionTokenizer.IsFunction(multiples[j][0].Value))
+                        {
+                            var func = multiples[j][0];
+                            multiples[j] = subExpressionProcess(multiples[j][2..^1]);
+
+                            multiples[j].Insert(0, new Token("("));
+                            multiples[j].Insert(0, func);
+                            multiples[j].Add(new Token(")"));
+                        }
+                        else
+                        {
+                            multiples[j] = subExpressionProcess(multiples[j][1..^1]);
+                            multiples[j].Insert(0, new Token("("));
+                            multiples[j].Add(new Token(")"));
+                        }
+
+                        terms[i].Add(new Token(String.Join("", multiples[j].Select(m => m.Value))));
+                    }
+                    else
+                    {
+                        terms[i].Add(multiples[j][0]);
+                    }
+
+                    if(j!= multiples.Count - 1)
+                    {
+                        terms[i].Add(new Token("*"));
+                    }
                 }
+
             }
 
-            return tokens;
+            return terms;
         }
 
-        private static List<List<Token>> SplitIntoTerms(List<Token> tokens)
+        private static List<List<Token>> SplitIntoMultiples(List<Token> tokens)
         {
             var terms = new List<List<Token>>();
             var currentTerm = new List<Token>();
@@ -54,13 +84,10 @@ namespace ArithmeticExpressionAnalyzer
                 if (token.Value == ")")
                     brakes--;
 
-                if (brakes== 0 && (token.Value == "+" || token.Value == "-"))
+                if (brakes == 0 && token.Value == "*")
                 {
                     if (currentTerm.Count > 0)
                     {
-                        if (token.Value == "-")
-                            currentTerm.Insert(0, new Token("-1"));
-
                         terms.Add(currentTerm);
                         currentTerm = new List<Token>();
                     }
@@ -68,6 +95,77 @@ namespace ArithmeticExpressionAnalyzer
                     continue;
                 }
                 currentTerm.Add(token);
+            }
+
+            if (currentTerm.Count > 0)
+            {
+                terms.Add(currentTerm);
+            }
+
+            return terms;
+        }
+
+        private static List<Token> ReplaceMultiplicationWithDivision(List<Token> tokens)
+        {
+            var reg = new Regex(@"^1/.*$");
+
+            for (int i = 0; i < tokens.Count; i++)
+            {
+                if (reg.IsMatch(tokens[i].Value) && i > 0 && tokens[i-1].Value == "*")
+                {
+                    tokens[i].Value = tokens[i].Value[2..];
+                    tokens[i-1].Value = "/";
+                }
+                else if(tokens[i].Value == "-1")
+                {
+                    if (i == 0 || tokens[i-1].Value=="(")
+                    {
+                        tokens[i].Value = "-";
+                        tokens.RemoveAt(i + 1);
+                        i--;
+                    }
+                    else if(tokens[i - 1].Value == "+")
+                    {
+                        tokens[i - 1].Value = "-";
+                        tokens.RemoveRange(i, 2);
+                    }
+                }
+            }
+
+            return tokens;
+        }
+
+        private static List<List<Token>> SplitIntoTerms(List<Token> tokens)
+        {
+            var terms = new List<List<Token>>();
+            var currentTerm = new List<Token>();
+            var brakes = 0;
+
+            for (var i = 0; i<tokens.Count; i++)
+            {
+                if (tokens[i].Value == "(")
+                    brakes++;
+
+                if (tokens[i].Value == ")")
+                    brakes--;
+
+                if (brakes== 0 && (tokens[i].Value == "+" || tokens[i].Value == "-"))
+                {
+                    if (currentTerm.Count > 0)
+                    {
+                        terms.Add(currentTerm);
+                        currentTerm = new List<Token>();
+                    }
+
+                    if (tokens[i].Value == "-")
+                    {
+                        currentTerm.Insert(0, new Token("*"));
+                        currentTerm.Insert(0, new Token("-1"));
+                    }
+
+                    continue;
+                }
+                currentTerm.Add(tokens[i]);
             }
 
             if (currentTerm.Count > 0)
