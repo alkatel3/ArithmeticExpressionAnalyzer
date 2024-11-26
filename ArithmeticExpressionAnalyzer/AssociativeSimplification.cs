@@ -20,7 +20,7 @@ namespace ArithmeticExpressionAnalyzer
             var terms = SplitIntoTerms(expression);
             terms = ReplaceDivisionWithMultiplication(terms);
             terms = ProcessDifficultMultiple(terms);
-            terms = terms.OrderBy(t => t.FirstOrDefault().Value).ToList();
+            terms = terms.OrderByDescending(t => t.FirstOrDefault().Value).ToList();
             res = GroupAndFactorize(terms);
             res = ReplaceMultiplicationWithDivision(res);
             return res;
