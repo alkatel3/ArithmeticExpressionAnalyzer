@@ -23,57 +23,88 @@ namespace ArithmeticExpressionAnalyzer
             terms = ProcessDifficultMultiple(terms);
             terms = terms.OrderByDescending(t => t.FirstOrDefault().Value).ToList();
             //terms = RemoveUselessBrakes(terms);
+            //terms = ProcessDifficultMultiple(terms);
             res = GroupAndFactorize(terms);
             res = ReplaceMultiplicationWithDivision(res);
             return res;
         }
 
-        //private static List<List<Token>> RemoveUselessBrakes(List<List<Token>> res)
-        //{
-        //    for (var i = 0; i < res.Count; i++)
-        //    {
-        //        while (res[i][0].Value == "-1" && res[i][2].Value == "(" && res[i][res.Count - 1].Value == ")")
-        //        {
-        //            var closeBrakeIndex = GetCloseBrakeIndex(res[i], 0);
+        private static List<List<Token>> RemoveUselessBrakes(List<List<Token>> res)
+        {
+            for (var i = 0; i < res.Count; i++)
+            {
+                while (res[i].Count>0 && res[i][0].Value == "-1" && res[i][2].Value == "(" && res[i][res[i].Count-1].Value == ")")
+                {
+                    var closeBrakeIndex = GetCloseBrakeIndex(res[i], 0);
 
-        //            if (closeBrakeIndex == res.Count - 1)
-        //            {
-        //                res[i].RemoveAt(2);
+                    if (closeBrakeIndex == res.Count - 1)
+                    {
+                        res[i].RemoveAt(2);
 
-        //                res[i].RemoveAt(res[i].Count-1);
-        //            }
-        //            else
-        //                break;
-        //        }
+                        res[i].RemoveAt(res[i].Count - 1);
+                    }
+                    else
+                        break;
+                }
 
-        //        while (res[i][0].Value.Length > 0 && res[i][0].Value[0] == '(' && res[i][].Valu[res[i].Count - 1] == ")")
-        //        {
-        //            var closeBrakeIndex = GetCloseBrakeIndex(res[i], 0);
+                while (res[i].Count > 2 && res[i][0].Value == "-1" && res[i][2].Value.Length > 3 && res[i][2].Value[0] == '(' && res[i][2].Value[res[i][2].Value.Length - 1] == ')')
+                {
+                    var tokeniser = new ArithmeticExpressionTokenizer();
+                    var temp = tokeniser.Tokenize(res[i][2].Value);
 
-        //            if (closeBrakeIndex == res.Count - 1)
-        //                res = res[1..^1];
-        //            else
-        //                break;
-        //        }
-        //    }
-        //    return res;
-        //}
+                    var closeBrakeIndex = GetCloseBrakeIndex(temp, 0);
 
-        //private static int GetCloseBrakeIndex(List<Token> term, int openBrackIndex)
-        //{
-        //    var nextCloseBrake = term.FirstOrDefault(t => t.Value == ")");
-        //    var nextCloseBrakeIndex = term.IndexOf(nextCloseBrake);
-        //    var subterm = term[(openBrackIndex + 1)..nextCloseBrakeIndex];
+                    if (closeBrakeIndex == temp.Count - 1)
+                    {
+                        res[i].RemoveAt(2);
+                        res[i].AddRange(temp[1..^1]);
+                    }
 
-        //    while (subterm.Count(t => t.Value == "(") != subterm.Count(t => t.Value == ")"))
-        //    {
-        //        nextCloseBrake = term[(nextCloseBrakeIndex + 1)..].FirstOrDefault(t => t.Value == ")");
-        //        nextCloseBrakeIndex = term.IndexOf(nextCloseBrake);
-        //        subterm = term[(openBrackIndex + 1)..nextCloseBrakeIndex];
-        //    }
+                    else
+                        break;
+                }
 
-        //    return nextCloseBrakeIndex;
-        //}
+                while (res[i].Count > 0 && res[i][0].Value == "(" && res[i][res[i].Count - 1].Value == ")")
+                {
+                    var closeBrakeIndex = GetCloseBrakeIndex(res[i], 0);
+
+                    if (closeBrakeIndex == res.Count - 1)
+                        res = res[1..^1];
+                    else
+                        break;
+                }
+
+                while (res[i][0].Value.Length > 0 && res[i][0].Value[0] == '(' && res[i][0].Value[res[i][0].Value.Length - 1] == ')')
+                {
+                    var tokeniser = new ArithmeticExpressionTokenizer();
+                    var temp = tokeniser.Tokenize(res[i][0].Value);
+
+                    var closeBrakeIndex = GetCloseBrakeIndex(temp, 0);
+
+                    if (closeBrakeIndex == temp.Count - 1)
+                        res[i] = temp[1..^1];
+                    else
+                        break;
+                }
+            }
+            return res;
+        }
+
+        private static int GetCloseBrakeIndex(List<Token> term, int openBrackIndex)
+        {
+            var nextCloseBrake = term.FirstOrDefault(t => t.Value == ")");
+            var nextCloseBrakeIndex = term.IndexOf(nextCloseBrake);
+            var subterm = term[(openBrackIndex + 1)..nextCloseBrakeIndex];
+
+            while (subterm.Count(t => t.Value == "(") != subterm.Count(t => t.Value == ")"))
+            {
+                nextCloseBrake = term[(nextCloseBrakeIndex + 1)..].FirstOrDefault(t => t.Value == ")");
+                nextCloseBrakeIndex = term.IndexOf(nextCloseBrake);
+                subterm = term[(openBrackIndex + 1)..nextCloseBrakeIndex];
+            }
+
+            return nextCloseBrakeIndex;
+        }
 
         private static List<List<Token>> ProcessDifficultMultiple(List<List<Token>> terms)
         {

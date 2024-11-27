@@ -333,7 +333,7 @@ namespace ArithmeticExpressionOptimizerTest
         [DataRow("a*(b+c)-a*(d+e)", "a*((c+b)-(e+d))")]
         [DataRow("a*(b+c)-d*(e+f)", "a*(c+b)-d*(f+e)")]
 
-        //[DataRow("(a*b+a*c)-(a*d+a*e)", "a*(b+c-d-e)")]
+        //[DataRow("(a*b+a*c)-(a*d+a*e)", "a*((c+b)-(e+d))")]
         //[DataRow("(x/y+x/z)-(x/w+x/t)", "x*(1/y+1/z-1/w-1/t)")]
         //[DataRow("(x*y-x*z)-(x*w-x*t)", "x*((y-z)-(w-t))")]
         //[DataRow("a/b-(a/c-a/d)", "a*(1/b-(1/c-1/d))")]
