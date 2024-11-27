@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -21,13 +22,68 @@ namespace ArithmeticExpressionAnalyzer
             terms = ReplaceDivisionWithMultiplication(terms);
             terms = ProcessDifficultMultiple(terms);
             terms = terms.OrderByDescending(t => t.FirstOrDefault().Value).ToList();
+            //terms = RemoveUselessBrakes(terms);
             res = GroupAndFactorize(terms);
             res = ReplaceMultiplicationWithDivision(res);
             return res;
         }
 
+        //private static List<List<Token>> RemoveUselessBrakes(List<List<Token>> res)
+        //{
+        //    for (var i = 0; i < res.Count; i++)
+        //    {
+        //        while (res[i][0].Value == "-1" && res[i][2].Value == "(" && res[i][res.Count - 1].Value == ")")
+        //        {
+        //            var closeBrakeIndex = GetCloseBrakeIndex(res[i], 0);
+
+        //            if (closeBrakeIndex == res.Count - 1)
+        //            {
+        //                res[i].RemoveAt(2);
+
+        //                res[i].RemoveAt(res[i].Count-1);
+        //            }
+        //            else
+        //                break;
+        //        }
+
+        //        while (res[i][0].Value.Length > 0 && res[i][0].Value[0] == '(' && res[i][].Valu[res[i].Count - 1] == ")")
+        //        {
+        //            var closeBrakeIndex = GetCloseBrakeIndex(res[i], 0);
+
+        //            if (closeBrakeIndex == res.Count - 1)
+        //                res = res[1..^1];
+        //            else
+        //                break;
+        //        }
+        //    }
+        //    return res;
+        //}
+
+        //private static int GetCloseBrakeIndex(List<Token> term, int openBrackIndex)
+        //{
+        //    var nextCloseBrake = term.FirstOrDefault(t => t.Value == ")");
+        //    var nextCloseBrakeIndex = term.IndexOf(nextCloseBrake);
+        //    var subterm = term[(openBrackIndex + 1)..nextCloseBrakeIndex];
+
+        //    while (subterm.Count(t => t.Value == "(") != subterm.Count(t => t.Value == ")"))
+        //    {
+        //        nextCloseBrake = term[(nextCloseBrakeIndex + 1)..].FirstOrDefault(t => t.Value == ")");
+        //        nextCloseBrakeIndex = term.IndexOf(nextCloseBrake);
+        //        subterm = term[(openBrackIndex + 1)..nextCloseBrakeIndex];
+        //    }
+
+        //    return nextCloseBrakeIndex;
+        //}
+
         private static List<List<Token>> ProcessDifficultMultiple(List<List<Token>> terms)
         {
+            //for (int i = 0; i < terms.Count; i++)
+            //{
+            //    var temp = RemoveUselessBrakes(terms[i]);
+            //    terms.RemoveAt(i);
+            //    terms.InsertRange(i, SplitIntoTerms(temp));
+            //}
+
             for (int i = 0; i < terms.Count; i++)
             {
                 var multiples = SplitIntoMultiples(terms[i]);
@@ -196,9 +252,16 @@ namespace ArithmeticExpressionAnalyzer
                 var tempValue = term[i];
                 if (isDiv)
                 {
-                    var temp = GetMultiple(term[i..]);
-                    tempValue.Value = "1/" + temp.Multiple;
-                    i += temp.Bias;
+                    if (term[i].Value != "(")
+                    {
+                        tempValue.Value = "1/" + term[i].Value;
+                    }
+                    else
+                    {
+                        var temp = GetMultiple(term[i..]);
+                        i += temp.Bias;
+                    }
+
                     isDiv = false;
                 }
 
@@ -340,11 +403,15 @@ namespace ArithmeticExpressionAnalyzer
             {
                 for(var i = 0; i < group.Count(); i++)
                 {
-                    if (group[i].Count == 1)
+                    if (group[i].Count == 1 || group[i].Count == 3 && (group[i][0].Value == "-1" || group[i][2].Value == "-1") && !commonFactor.Contains("-1"))
                     {
                         if (number != 0)
                         {
-                            number++;
+                            if (group[i].Count == 3)
+                                number--;
+                            else
+                                number++;
+
                             group.RemoveAt(i);
                             group[numberIndex][0].Value = number.ToString();
                             i--;
