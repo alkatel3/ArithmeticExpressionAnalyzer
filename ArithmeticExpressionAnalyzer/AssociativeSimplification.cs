@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ArithmeticExpressionAnalyzer;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -18,103 +19,143 @@ namespace ArithmeticExpressionAnalyzer
         private static List<Token> subExpressionProcess(List<Token> expression)
         {
             var res = new List<Token>();
+            expression = RemoveUselessBrakes(expression);
             var terms = SplitIntoTerms(expression);
             terms = ReplaceDivisionWithMultiplication(terms);
             terms = ProcessDifficultMultiple(terms);
             terms = terms.OrderByDescending(t => t.FirstOrDefault().Value).ToList();
-            //terms = RemoveUselessBrakes(terms);
-            //terms = ProcessDifficultMultiple(terms);
             res = GroupAndFactorize(terms);
             res = ReplaceMultiplicationWithDivision(res);
             return res;
         }
 
-        private static List<List<Token>> RemoveUselessBrakes(List<List<Token>> res)
+        private static List<Token> RemoveUselessBrakes(List<Token> tokens)
         {
-            for (var i = 0; i < res.Count; i++)
+            if (!tokens.Exists(t => t.Value == "(" || t.Value == ")"))
+                return tokens;
+
+            var res = new List<Token>();
+            var brakes = 0;
+            var brakesPairs = 0;
+            var openBrakeIndex = 0;
+            var closeBrakeIndex = 0;
+            List<Token> subExpression;
+
+            for (var i = 0; i < tokens.Count; i++)
             {
-                while (res[i].Count>0 && res[i][0].Value == "-1" && res[i][2].Value == "(" && res[i][res[i].Count-1].Value == ")")
+                var tokenValue = tokens[i].Value;
+                if (tokenValue == "(")
                 {
-                    var closeBrakeIndex = GetCloseBrakeIndex(res[i], 0);
+                    if (brakes == 0)
+                        openBrakeIndex = i;
 
-                    if (closeBrakeIndex == res.Count - 1)
+                    brakes++;
+                    brakesPairs++;
+                }
+                else if (tokenValue == ")")
+                {
+                    brakes--;
+
+                    if (brakes == 0)
+                        closeBrakeIndex = i;
+                }
+                else if (brakes == 0)
+                {
+                    res.Add(tokens[i]);
+                }
+
+                if (brakes == 0 && brakesPairs > 0)
+                {
+                    subExpression = RemoveUselessBrakes(tokens[(openBrakeIndex + 1)..closeBrakeIndex]);
+
+                    if (openBrakeIndex != 0)
                     {
-                        res[i].RemoveAt(2);
-
-                        res[i].RemoveAt(res[i].Count - 1);
+                        if (closeBrakeIndex + 1 == tokens.Count)
+                        {
+                            SimpleAssociate(tokens, res, openBrakeIndex, subExpression);
+                        }
+                        else
+                        {
+                            if (tokens[closeBrakeIndex + 1].Value == "+" || tokens[closeBrakeIndex + 1].Value == "-")
+                            {
+                                SimpleAssociate(tokens, res, openBrakeIndex, subExpression);
+                            }
+                            else
+                            {
+                                res.Add(new Token("("));
+                                res.AddRange(subExpression);
+                                res.Add(new Token(")"));
+                            }
+                        }
+                    }
+                    else if (closeBrakeIndex + 1 == tokens.Count || tokens[closeBrakeIndex + 1].Value == "+" || tokens[closeBrakeIndex + 1].Value == "-")
+                    {
+                        res.AddRange(subExpression);
                     }
                     else
-                        break;
-                }
-
-                while (res[i].Count > 2 && res[i][0].Value == "-1" && res[i][2].Value.Length > 3 && res[i][2].Value[0] == '(' && res[i][2].Value[res[i][2].Value.Length - 1] == ')')
-                {
-                    var tokeniser = new ArithmeticExpressionTokenizer();
-                    var temp = tokeniser.Tokenize(res[i][2].Value);
-
-                    var closeBrakeIndex = GetCloseBrakeIndex(temp, 0);
-
-                    if (closeBrakeIndex == temp.Count - 1)
                     {
-                        res[i].RemoveAt(2);
-                        res[i].AddRange(temp[1..^1]);
+                        res.Add(new Token("("));
+                        res.AddRange(subExpression);
+                        res.Add(new Token(")"));
                     }
-
-                    else
-                        break;
-                }
-
-                while (res[i].Count > 0 && res[i][0].Value == "(" && res[i][res[i].Count - 1].Value == ")")
-                {
-                    var closeBrakeIndex = GetCloseBrakeIndex(res[i], 0);
-
-                    if (closeBrakeIndex == res.Count - 1)
-                        res = res[1..^1];
-                    else
-                        break;
-                }
-
-                while (res[i][0].Value.Length > 0 && res[i][0].Value[0] == '(' && res[i][0].Value[res[i][0].Value.Length - 1] == ')')
-                {
-                    var tokeniser = new ArithmeticExpressionTokenizer();
-                    var temp = tokeniser.Tokenize(res[i][0].Value);
-
-                    var closeBrakeIndex = GetCloseBrakeIndex(temp, 0);
-
-                    if (closeBrakeIndex == temp.Count - 1)
-                        res[i] = temp[1..^1];
-                    else
-                        break;
+                    brakesPairs = 0;
                 }
             }
+
             return res;
         }
 
-        private static int GetCloseBrakeIndex(List<Token> term, int openBrackIndex)
+        private static void SimpleAssociate(List<Token> tokens, List<Token> res, int openBrakeIndex, List<Token> subExpression)
         {
-            var nextCloseBrake = term.FirstOrDefault(t => t.Value == ")");
-            var nextCloseBrakeIndex = term.IndexOf(nextCloseBrake);
-            var subterm = term[(openBrackIndex + 1)..nextCloseBrakeIndex];
+            List<Token> left, mul;
 
-            while (subterm.Count(t => t.Value == "(") != subterm.Count(t => t.Value == ")"))
+            switch (tokens[openBrakeIndex - 1].Value)
             {
-                nextCloseBrake = term[(nextCloseBrakeIndex + 1)..].FirstOrDefault(t => t.Value == ")");
-                nextCloseBrakeIndex = term.IndexOf(nextCloseBrake);
-                subterm = term[(openBrackIndex + 1)..nextCloseBrakeIndex];
-            }
+                case "-":
+                    var brakes = 0;
+                    subExpression.ForEach(t =>
+                    {
+                        if (t.Value == "(")
+                            brakes++;
+                        else if (t.Value == ")")
+                            brakes--;
 
-            return nextCloseBrakeIndex;
+                        if (brakes == 0)
+                        {
+                            switch (t.Value)
+                            {
+                                case "-":
+                                    t.Value = "+";
+                                    break;
+                                case "+":
+                                    t.Value = "-";
+                                    break;
+                            }
+                        }
+                    });
+
+                    if (subExpression[0].Value == "+")
+                    {
+                        res.RemoveAt(res.Count - 1);
+                        if (!res.Any() || res[res.Count() - 1].Value == "(")
+                            subExpression.RemoveAt(0);
+                    }
+
+                    res.AddRange(subExpression);
+                    break;
+                case "+":
+                    res.AddRange(subExpression);
+                    break;
+                default:
+                    res.Add(new Token("("));
+                    res.AddRange(subExpression);
+                    res.Add(new Token(")"));
+                    break;
+            }
         }
 
         private static List<List<Token>> ProcessDifficultMultiple(List<List<Token>> terms)
         {
-            //for (int i = 0; i < terms.Count; i++)
-            //{
-            //    var temp = RemoveUselessBrakes(terms[i]);
-            //    terms.RemoveAt(i);
-            //    terms.InsertRange(i, SplitIntoTerms(temp));
-            //}
-
             for (int i = 0; i < terms.Count; i++)
             {
                 var multiples = SplitIntoMultiples(terms[i]);
@@ -290,6 +331,7 @@ namespace ArithmeticExpressionAnalyzer
                     else
                     {
                         var temp = GetMultiple(term[i..]);
+                        tempValue.Value = "1/" + temp.Multiple;
                         i += temp.Bias;
                     }
 
@@ -361,6 +403,15 @@ namespace ArithmeticExpressionAnalyzer
             var groupToSimplify = factorCounts
                 .Where(kv => kv.Value.Count == maxMultiple && kv.Value.Count>1).FirstOrDefault().Key;
 
+            if (groupToSimplify == "-1")
+            {
+                 maxMultiple = factorCounts.Where(f=>f.Key!="-1").Max(f => f.Value.Count);
+                var groupToSimplifyTemp = factorCounts
+                    .Where(kv => kv.Value.Count == maxMultiple && kv.Value.Count > 1 && kv.Key != "-1").FirstOrDefault().Key;
+
+                groupToSimplify = groupToSimplifyTemp == null ? groupToSimplify : groupToSimplifyTemp;
+            }
+
             if(groupToSimplify is null)
             {
                 for(int i = 0; i<terms.Count; i++)
@@ -403,16 +454,19 @@ namespace ArithmeticExpressionAnalyzer
                     commonFactors.Insert(i + 1, "*");
                 }
             }
-            res.AddRange(commonFactors.Select(f => new Token(f)));
+            
             if (resGroup.Count > 1)
             {
+                res.AddRange(commonFactors.Select(f => new Token(f)));
                 res.Add(new Token("*"));
                 res.Add(new Token("("));
                 res.AddRange(GroupAndFactorize(resGroup));
                 res.Add(new Token(")"));
             }
+            else if (resGroup[0][0].Value=="0") {}
             else
             {
+                res.AddRange(commonFactors.Select(f => new Token(f)));
                 res.Insert(0, new Token("*"));
                 res.Insert(0, resGroup[0][0]);
             }

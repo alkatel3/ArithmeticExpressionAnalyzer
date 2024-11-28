@@ -51,10 +51,12 @@ namespace ArithmeticExpressionAnalyzer
                 //tree.BuildTree(optimizedExpression);
                 //tree.DisplayTree();
                 Console.WriteLine($"Застосування асоціативного закону");
-                var associativeSimplificationExpression = DistributivitySimplification.Execute(tokens);
+                //var associativeSimplificationExpression = DistributivitySimplification.Execute(tokens);
+                var associativeSimplificationExpression = AssociativeSimplification.Execute(tokens);
                 Console.WriteLine(String.Join("", associativeSimplificationExpression.Select(t => t.Value)));
-                Console.ReadKey();
-                Console.Clear();
+                Console.WriteLine();
+                //Console.ReadKey();
+                //Console.Clear();
             }
         }
 
