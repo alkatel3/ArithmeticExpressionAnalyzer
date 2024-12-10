@@ -50,10 +50,12 @@ namespace ArithmeticExpressionAnalyzer
                 var tree = new ArithmeticTree();
                 tree.BuildTree(optimizedExpression);
                 tree.DisplayTree();
+                Console.WriteLine();
 
                 // Обчислення виразу
-                double result = StaticPipeline.EvaluateTree(tree.Root);
-                Console.WriteLine($"Результат: {result}"); // Виведе: Результат: 16
+                var result = StaticPipeline.EvaluateTree(tree.Root);
+                var time = result.Last().OutPutRow;
+                StaticPipeline.Display(result);
 
                 //Console.WriteLine($"Застосування асоціативного закону");
                 //var associativeSimplificationExpression = DistributivitySimplification.Execute(tokens);
