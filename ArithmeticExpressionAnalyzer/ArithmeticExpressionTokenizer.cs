@@ -90,5 +90,10 @@ namespace ArithmeticExpressionAnalyzer
                 token == "(" ? TokenType.openBrake :
                 token == ")" ? TokenType.closeBrake : TokenType.unknown;
         }
+
+        public static bool IsOperand(string token)
+        {
+            return IsNumber(token) || IsVariable(token);
+        }
     }
 }

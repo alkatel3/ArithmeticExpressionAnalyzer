@@ -42,5 +42,25 @@ namespace ArithmeticExpressionAnalyzer
             else if (Right == null)
                 Deep = Left.Deep + 1;
         }
+
+        public double Evaluate()
+        {
+            if (ArithmeticExpressionTokenizer.IsOperand(Value))
+            {
+                return double.Parse(Value); // Якщо це не оператор, повертаємо числове значення
+            }
+
+            double leftValue = Left.Evaluate(); // Рекурсивно обчислюємо ліве піддерево
+            double rightValue = Right.Evaluate(); // Рекурсивно обчислюємо праве піддерево
+
+            return Value switch
+            {
+                "+" => leftValue + rightValue,
+                "-" => leftValue - rightValue,
+                "*" => leftValue * rightValue,
+                "/" => leftValue / rightValue,
+                _ => throw new InvalidOperationException("Невідомий оператор")
+            };
+        }
     }
 }
