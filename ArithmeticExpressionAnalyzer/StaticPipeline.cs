@@ -14,9 +14,15 @@ namespace ArithmeticExpressionAnalyzer
 
         public static List<PipelineNode> EvaluateTree(Node root)
         {
-            var pipelineRote = new PipelineNode(root);
+            var pipelineRoot = new PipelineNode(root);
+            pipelineRoot.DisplayNode();
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine();
+            Console.WriteLine();
             // Отримуємо вузли за рівнями
-            var levels = PipelineNode.GetNodesByLevels(pipelineRote);
+            var levels = PipelineNode.GetNodesByLevels(pipelineRoot);
             var groupedlevels = new List<List<PipelineNode>>();
 
             foreach (var level in levels)
@@ -48,33 +54,26 @@ namespace ArithmeticExpressionAnalyzer
                         var rightOut = -1;
                         var lastOut = -1;
 
-                        if(temp.Left is not null || temp.Right is not null)
+                        if (temp.Left is not null)
                         {
-                            if (temp.Left is not null)
-                            {
-                                if (!temp.Left.IsLoaded)
-                                    throw new Exception();
+                            if (!temp.Left.IsLoaded)
+                                throw new Exception();
 
-                                leftOut = temp.Left.OutPutRow+1;
-                            }
-
-                            if (temp.Right is not null)
-                            {
-                                if (!temp.Right.IsLoaded)
-                                    throw new Exception();
-
-                                rightOut = temp.Right.OutPutRow+1;
-                            }
+                            leftOut = temp.Left.OutPutRow+1;
                         }
 
-                        if(lastLoaded.Value == temp.Value)
+                        if (temp.Right is not null)
                         {
+                            if (!temp.Right.IsLoaded)
+                                throw new Exception();
+
+                            rightOut = temp.Right.OutPutRow+1;
+                        }
+
+                        if(lastLoaded.Value == temp.Value && lastLoaded.Level == temp.Level)
                             lastOut = lastLoaded.InputPutRow + temp.Duration;
-                        } 
-                        else if (lastLoaded.Value != temp.Value)
-                        {
+                        else
                             lastOut = lastLoaded.OutPutRow - 1;
-                        }
 
                         temp.InputPutRow = new List<int> { leftOut, rightOut, lastOut }.Max();
                     }

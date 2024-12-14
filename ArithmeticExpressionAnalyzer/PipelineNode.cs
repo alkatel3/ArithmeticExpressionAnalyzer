@@ -11,6 +11,7 @@ namespace ArithmeticExpressionAnalyzer
         public int InputPutRow { get; set; } = -1;
         public PipelineNode Left { get; set; }
         public PipelineNode Right { get; set; }
+        public int Level { get; private set; }
 
         public PipelineNode(string _value)
         {
@@ -23,9 +24,11 @@ namespace ArithmeticExpressionAnalyzer
             }
         }
 
-        public PipelineNode(Node node)
+        public PipelineNode(Node node, int level = 0)
         {
             Value = node.Value;
+            Level = level;
+
             Duration = GetOparationDuration(node.Value);
 
             if (Duration == -1)
@@ -34,10 +37,10 @@ namespace ArithmeticExpressionAnalyzer
             }
 
             if (node.Left is not null && GetOparationDuration(node.Left.Value) != -1)
-                Left = new PipelineNode(node.Left);
+                Left = new PipelineNode(node.Left, level+1);
 
             if (node.Right is not null && GetOparationDuration(node.Right.Value) != -1)
-                Right = new PipelineNode(node.Right);
+                Right = new PipelineNode(node.Right, level + 1);
         }
 
         public int GetOparationDuration(string duration)
@@ -65,8 +68,8 @@ namespace ArithmeticExpressionAnalyzer
 
                 if (levels.Count <= level)
                     levels.Add(new List<PipelineNode>());
-                if (!ArithmeticExpressionTokenizer.IsOperand(node.Value))
-                    levels[level].Add(node);
+
+                levels[level].Add(node);
 
                 if (node.Left != null)
                     queue.Enqueue((node.Left, level + 1));
@@ -77,6 +80,38 @@ namespace ArithmeticExpressionAnalyzer
 
             levels.Reverse(); // Повертаємо рівні знизу вгору
             return levels;
+        }
+
+        public void DisplayNode()
+        {
+            int initialX = Console.WindowWidth / 2;
+            DisplayNode(this, initialX, Console.GetCursorPosition().Top + 1, Console.WindowWidth / 4);
+        }
+
+        private void DisplayNode(PipelineNode node, int x, int y, int offset)
+        {
+            if (node == null)
+                return;
+
+            Console.SetCursorPosition(x, y);
+            Console.Write(node.Value);
+            if (offset == 0 || offset == 1)
+            {
+                offset = 2;
+            }
+            if (node.Left != null)
+            {
+                Console.SetCursorPosition(x - offset / 2, y + 1);
+                Console.Write("/");
+                DisplayNode(node.Left, x - offset, y + 2, offset / 2);
+            }
+
+            if (node.Right != null)
+            {
+                Console.SetCursorPosition(x + offset / 2, y + 1);
+                Console.Write("\\");
+                DisplayNode(node.Right, x + offset, y + 2, offset / 2);
+            }
         }
     }
 }

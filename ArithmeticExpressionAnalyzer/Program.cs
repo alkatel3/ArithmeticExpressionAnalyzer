@@ -11,7 +11,7 @@ namespace ArithmeticExpressionAnalyzer
             {
                 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-                //Get Expression
+                //Get Expression 
                 Console.WriteLine("Введіть вираз:");
                 var exp = Console.ReadLine();
                 exp = exp.Replace(" ", "");
@@ -31,17 +31,6 @@ namespace ArithmeticExpressionAnalyzer
                 //Optimize Expression
                 var optimizedExpression = ArithmeticExpressionOptimizer.Optimize(tokens);
                 displayTokens(optimizedExpression);
-
-                ValidationRes = ArithmeticExpressionValidator.Validate(optimizedExpression);
-                if (ValidationRes != null && ValidationRes.Count() > 0)
-                {
-                    Console.WriteLine();
-                    Console.WriteLine("Оптимізований вираз містить помилки");
-                    Console.ReadKey();
-                    Console.Clear();
-                    continue;
-                }
-
                 displayOptimising();
                 Console.WriteLine();
 
@@ -49,12 +38,18 @@ namespace ArithmeticExpressionAnalyzer
                 //Expression Build Tree
                 var tree = new ArithmeticTree();
                 tree.BuildTree(optimizedExpression);
-                tree.DisplayTree();
-                Console.WriteLine();
+                //tree.DisplayTree();
 
                 // Обчислення виразу
                 var result = StaticPipeline.EvaluateTree(tree.Root);
-                var time = result.Last().OutPutRow;
+                double total_cycles = result.Last().OutPutRow;
+                double serial_cycles = result.Sum(n => n.Duration) * StaticPipeline.LayersCount;
+                double speedup = serial_cycles / total_cycles;
+                double efficiency = speedup / StaticPipeline.LayersCount;
+
+                Console.WriteLine($"Час виконання: {total_cycles}\n" +
+                    $"Коефіцієнт прискорення: {speedup:F2}\n" +
+                    $"Коефіцієнт ефективності: {efficiency:F2}");
                 StaticPipeline.Display(result);
 
                 //Console.WriteLine($"Застосування асоціативного закону");
