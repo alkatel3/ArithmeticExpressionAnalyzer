@@ -15,12 +15,12 @@ namespace ArithmeticExpressionAnalyzer
         public static List<PipelineNode> EvaluateTree(Node root)
         {
             var pipelineRoot = new PipelineNode(root);
-            pipelineRoot.DisplayNode();
-            Console.WriteLine();
-            Console.WriteLine();
-            Console.WriteLine();
-            Console.WriteLine();
-            Console.WriteLine();
+            //pipelineRoot.DisplayNode();
+            //Console.WriteLine();
+            //Console.WriteLine();
+            //Console.WriteLine();
+            //Console.WriteLine();
+            //Console.WriteLine();
             // Отримуємо вузли за рівнями
             var levels = PipelineNode.GetNodesByLevels(pipelineRoot);
             var groupedlevels = new List<List<PipelineNode>>();
@@ -104,7 +104,7 @@ namespace ArithmeticExpressionAnalyzer
             return res;
         }
 
-        internal static void Display(List<PipelineNode> PipelineNodes)
+        internal static void Display(List<PipelineNode> PipelineNodes, int startCol = 0, bool rewriteExcel = false)
         {
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
@@ -114,13 +114,13 @@ namespace ArithmeticExpressionAnalyzer
                 var worksheet = package.Workbook.Worksheets.Add("Table");
 
                 // Заповнення заголовків
-                worksheet.Cells[1, 1].Value = "T";
-                worksheet.Cells[1, 2].Value = "Input";
+                worksheet.Cells[1, startCol+1].Value = "T";
+                worksheet.Cells[1, startCol + 2].Value = "Input";
                 for (int i = 1; i <= LayersCount; i++)
                 {
-                    worksheet.Cells[1, 2 + i].Value = "S" + i;
+                    worksheet.Cells[1, startCol + 2 + i].Value = "S" + i;
                 }
-                worksheet.Cells[1, LayersCount + 3].Value = "Output";
+                worksheet.Cells[1, startCol + LayersCount + 3].Value = "Output";
 
                 // Форматування заголовків
                 using (var range = worksheet.Cells[1, 1, 1, LayersCount + 3])
@@ -135,11 +135,11 @@ namespace ArithmeticExpressionAnalyzer
 
                 for(var i =0; i<res.GetLength(0); i++)
                 {
-                    worksheet.Cells[i + 2, 1].Value = i + 1;
-                    worksheet.Cells[i + 2, 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Left;
+                    worksheet.Cells[i + 2, startCol + 1].Value = i + 1;
+                    worksheet.Cells[i + 2, startCol + 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Left;
                     for (var j = 0; j < res.GetLength(1); j++)
                     {
-                        var cell = worksheet.Cells[i + 2, j + 2];
+                        var cell = worksheet.Cells[i + 2, startCol + j + 2];
 
                         if(j == 0 || j == res.GetLength(1)-1)
                         {

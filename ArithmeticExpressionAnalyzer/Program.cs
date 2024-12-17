@@ -1,4 +1,6 @@
 ﻿
+using System.Linq;
+
 namespace ArithmeticExpressionAnalyzer
 {
     internal class Program
@@ -36,21 +38,52 @@ namespace ArithmeticExpressionAnalyzer
 
 
                 //Expression Build Tree
-                var tree = new ArithmeticTree();
-                tree.BuildTree(optimizedExpression);
+                var tree1 = new ArithmeticTree();
+                tree1.BuildTree(optimizedExpression);
                 //tree.DisplayTree();
 
                 // Обчислення виразу
-                var result = StaticPipeline.EvaluateTree(tree.Root);
-                double total_cycles = result.Last().OutPutRow;
-                double serial_cycles = result.Sum(n => n.Duration) * StaticPipeline.LayersCount;
-                double speedup = serial_cycles / total_cycles;
-                double efficiency = speedup / StaticPipeline.LayersCount;
+                var result1 = StaticPipeline.EvaluateTree(tree1.Root);
+                double total_cycles1 = result1.Last().OutPutRow;
+                double serial_cycles1 = result1.Sum(n => n.Duration) * StaticPipeline.LayersCount;
+                double speedup1 = serial_cycles1 / total_cycles1;
+                double efficiency1 = speedup1 / StaticPipeline.LayersCount;
 
-                Console.WriteLine($"Час виконання: {total_cycles}\n" +
-                    $"Коефіцієнт прискорення: {speedup:F2}\n" +
-                    $"Коефіцієнт ефективності: {efficiency:F2}");
-                StaticPipeline.Display(result);
+                Console.WriteLine($"Початковий вираз зі спрощеннями:\n" +
+                    $"Час виконання: {total_cycles1}\n" +
+                    $"Коефіцієнт прискорення: {speedup1:F2}\n" +
+                    $"Коефіцієнт ефективності: {efficiency1:F2}\n\n");
+                StaticPipeline.Display(result1, 0, true);
+
+                var associativeSimplificationExpression = AssociativeSimplification.Execute(tokens);
+                var tree2 = new ArithmeticTree();
+                tree2.BuildTree(tokenizer.Tokenize(String.Join("", associativeSimplificationExpression.Select(t => t.Value)))); 
+                var result2 = StaticPipeline.EvaluateTree(tree2.Root);
+                double total_cycles2 = result2.Last().OutPutRow;
+                double serial_cycles2 = result2.Sum(n => n.Duration) * StaticPipeline.LayersCount;
+                double speedup2 = serial_cycles2/ total_cycles2;
+                double efficiency2 = speedup2 / StaticPipeline.LayersCount;
+
+                Console.WriteLine($"Вираз після асоціативного спрощення:\n" +
+                    $"Час виконання: {total_cycles2}\n" +
+                    $"Коефіцієнт прискорення: {speedup2:F2}\n" +
+                    $"Коефіцієнт ефективності: {efficiency2:F2}\n\n");
+                StaticPipeline.Display(result2, 10, true);
+
+                var distributivitySimplificationExpression = DistributivitySimplification.Execute(tokens);
+                var tree3 = new ArithmeticTree();
+                tree3.BuildTree(tokenizer.Tokenize(String.Join("", distributivitySimplificationExpression.Select(t => t.Value))));
+                var result3 = StaticPipeline.EvaluateTree(tree3.Root);
+                double total_cycles3 = result3.Last().OutPutRow;
+                double serial_cycles3 = result3.Sum(n => n.Duration) * StaticPipeline.LayersCount;
+                double speedup3 = serial_cycles3 / total_cycles3;
+                double efficiency3 = speedup3 / StaticPipeline.LayersCount;
+
+                Console.WriteLine($"Вираз після дистрибутивного спрощення спрощення:\n" +
+                    $"Час виконання: {total_cycles3}\n" +
+                    $"Коефіцієнт прискорення: {speedup3:F2}\n" +
+                    $"Коефіцієнт ефективності: {efficiency3:F2}\n\n");
+                StaticPipeline.Display(result3, 20, true);
 
                 //Console.WriteLine($"Застосування асоціативного закону");
                 //var associativeSimplificationExpression = DistributivitySimplification.Execute(tokens);
